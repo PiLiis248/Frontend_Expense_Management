@@ -19,12 +19,10 @@ const MainLayout = () => {
       <div className="layout">
         <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
         <div className={`main-content ${sidebarOpen ? "sidebar-shifted" : ""}`}>
-          <Header toggleSidebar={toggleSidebar} />
-          <main className="content">
-            <div className="container">
-              <Outlet />
-            </div>
-          </main>
+          <Header toggleSidebar={toggleSidebar}/>
+          <div className="content">
+            <Outlet/>
+          </div>
         </div>
       </div>
     </AuthProvider>

@@ -11,7 +11,6 @@ import HomePage from "./components/pages/Homepage";
 import MainLayout from "./layout/MainLayout";
 import PATHS from "./constants/path";
 import ResetPasswordPage from "./components/pages/ResetPasswordPage";
-import PublicRoute from "./router/PublicRoute";
 import PrivateRoute from "./router/PrivateRoute";
 import CategoryPage from "./components/pages/CategoryPage";
 import TransactionPage from "./components/pages/TransactionPage";
@@ -25,14 +24,14 @@ function App() {
         <AuthProvider>
           <Routes>
             {/* Public Routes */}
-            {/* <Route element={<PublicRoute />}> */}
+            <Route>
               <Route path={PATHS.login} element={<LoginPage />} />
               <Route path={PATHS.register} element={<RegisterPage />} />
               <Route path={PATHS.resetPassword} element={<ResetPasswordPage />} />
-            {/* </Route> */}
+            </Route>
 
             {/* Private Routes */}
-            {/* <Route element={<PrivateRoute />}> */}
+            <Route element={<PrivateRoute />}>
               <Route path={PATHS.homepage} element={<MainLayout />}>
                 <Route index element={<HomePage />} />
               </Route>
@@ -48,13 +47,10 @@ function App() {
               <Route path={PATHS.profile} element={<MainLayout />}>
                 <Route index element={<ProfilePage />} />
               </Route>
-            {/* </Route> */}
+              {/* Redirect any other path to login */}
+              <Route path="*" element={<Navigate to={PATHS.homepage} replace />} />
+            </Route>
             
-            {/* Root path redirect to login */}
-            <Route path="/" element={<Navigate to={PATHS.login} replace />} />
-            
-            {/* Redirect any other path to login */}
-            <Route path="*" element={<Navigate to={PATHS.login} replace />} />
           </Routes>
         </AuthProvider>
       </Router>

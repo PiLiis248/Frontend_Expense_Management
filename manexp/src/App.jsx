@@ -28,13 +28,16 @@ function App() {
               <Route path={PATHS.login} element={<LoginPage />} />
               <Route path={PATHS.register} element={<RegisterPage />} />
               <Route path={PATHS.resetPassword} element={<ResetPasswordPage />} />
+              <Route path={PATHS.homepage} element={<MainLayout />}>
+                <Route index element={<HomePage />} />
+              </Route>
             </Route>
 
             {/* Private Routes */}
             <Route element={<PrivateRoute />}>
-              <Route path={PATHS.homepage} element={<MainLayout />}>
+              {/* <Route path={PATHS.homepage} element={<MainLayout />}>
                 <Route index element={<HomePage />} />
-              </Route>
+              </Route> */}
               <Route path={PATHS.manageCategory} element={<MainLayout />}>
                 <Route index element={<CategoryPage />} />
               </Route>
@@ -50,7 +53,7 @@ function App() {
               {/* Redirect any other path to login */}
               <Route path="*" element={<Navigate to={PATHS.homepage} replace />} />
             </Route>
-            
+
           </Routes>
         </AuthProvider>
       </Router>

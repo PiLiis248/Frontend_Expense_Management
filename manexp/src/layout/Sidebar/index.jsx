@@ -2,15 +2,19 @@
 import { NavLink } from "react-router-dom"
 import "../../assets/Sidebar.css"
 import PATHS from "../../constants/path"
+import { IoClose } from "react-icons/io5";
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
+  const handleCloseSidebar = () => {
+    toggleSidebar()
+  }
   return (
     <aside className={`sidebar ${isOpen ? "open" : ""}`}>
       <div className="sidebar-header">
         <h2>Expense Manager</h2>
         <button className="close-sidebar" onClick={toggleSidebar}>
-          <i className="fas fa-times"></i>
-        </button>
+        <IoClose size={24} />
+      </button>
       </div>
       <nav className="sidebar-nav">
         <ul>

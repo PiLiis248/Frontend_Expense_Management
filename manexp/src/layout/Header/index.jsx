@@ -45,8 +45,9 @@ const Header = ({ toggleSidebar }) => {
           {/* Fallback option if Font Awesome isn't loading properly */}
           <span className="menu-icon">☰</span>
         </button>
-        <h1>Quản lý chi tiêu</h1>
+         <h1 className="title">Quản lý chi tiêu</h1>
       </div>
+
       <div className="header-right">
         <div className="user-dropdown" ref={dropdownRef}>
           <button className="user-dropdown-toggle" onClick={toggleDropdown}>

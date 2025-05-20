@@ -1,0 +1,121 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  width: 95%;
+  max-width: 450px;
+  overflow: hidden;
+}
+
+.modal-header {
+  position: relative;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.modal-close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #888;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Forgot Password Specific Styles */
+.forgot-password-container {
+  padding: 10px 0;
+}
+
+.forgot-password-desc {
+  margin-bottom: 20px;
+  color: #555;
+}
+
+.reset-success, .reset-error {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.reset-message {
+  color: #28a745;
+  font-weight: 500;
+  margin-bottom: 15px;
+}
+
+.error-message {
+  color: #dc3545;
+  font-weight: 500;
+  margin-bottom: 15px;
+}
+
+.countdown {
+  color: #666;
+  font-size: 14px;
+}
+
+.resend-link {
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.resend-link span {
+  color: #007bff;
+  text-decoration: underline;
+}
+
+/* Animation for modal */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-container {
+  animation: modalFadeIn 0.3s ease-out;
+}

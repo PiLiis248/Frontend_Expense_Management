@@ -7,6 +7,7 @@ const PATHS = {
   manageTransaction: "/transactions",
   manageCategory: "/categories",
   manageWallet: "/wallets",
+  manageSpendingLimits: "/spending-limits",
   profile: "/profile"
 };
 export default PATHS;

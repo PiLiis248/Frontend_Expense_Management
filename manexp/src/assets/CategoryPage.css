@@ -1,0 +1,253 @@
+.categories-page {
+  padding: 20px 0;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--dark-color);
+}
+
+.category-form-container {
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.category-form h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+  color: var(--dark-color);
+}
+
+.categories-page > .page-header > button {
+  width: 11rem;
+}
+
+.search-container {
+  margin-bottom: 20px;
+}
+
+.search-box {
+  position: relative;
+  max-width: 500px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #777;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 40px;
+  border: 1px solid #ddd;
+  border-radius: var(--border-radius);
+  font-size: 16px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.clear-search {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #777;
+  cursor: pointer;
+}
+
+.search-results h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.2rem;
+  color: var(--dark-color);
+}
+
+.no-results {
+  text-align: center;
+  padding: 30px;
+  color: #777;
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.category-card {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.category-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: rgba(52, 152, 219, 0.1);
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+  font-size: 1.2rem;
+}
+
+.category-icon.small {
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+}
+
+.category-details {
+  flex: 1;
+}
+
+.category-details h4 {
+  margin: 0 0 5px;
+  font-size: 1rem;
+}
+
+.category-details p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.parent-category {
+  margin-top: 5px !important;
+  font-style: italic;
+}
+
+.category-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.categories-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.category-group {
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+}
+
+.category-parent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #eee;
+}
+
+.category-parent-header {
+  display: flex;
+  align-items: center;
+}
+
+.category-parent-info {
+  margin-left: 15px;
+}
+
+.category-parent-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+/* Style cho tổng giao dịch */
+.total-transactions {
+  margin: 5px 0 0 0 !important;
+  font-size: 0.85rem !important;
+  color: var(--primary-color) !important;
+  font-weight: 600;
+  background-color: rgba(52, 152, 219, 0.1);
+  padding: 3px 8px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.category-children {
+  padding: 10px 20px;
+}
+
+.category-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.category-child:last-child {
+  border-bottom: none;
+}
+
+.category-child-content {
+  display: flex;
+  align-items: center;
+}
+
+.btn-icon.small {
+  width: 28px;
+  height: 28px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+  .categories-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-parent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .category-parent .category-actions {
+    align-self: flex-end;
+  }
+
+  .category-parent-header {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .category-parent-info {
+    margin-left: 0;
+    margin-top: 10px;
+  }
+}

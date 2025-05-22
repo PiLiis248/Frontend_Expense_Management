@@ -17,6 +17,7 @@ import CategoryPage from "./components/pages/CategoryPage";
 import TransactionPage from "./components/pages/TransactionPage";
 import WalletPage from "./components/pages/WalletPage";
 import ProfilePage from "./components/pages/ProfilePage";
+import SpendingLimitsPage from "./components/pages/SpendingLimitsPage";
 
 function App() {
   return (
@@ -41,6 +42,9 @@ function App() {
               </Route>
               <Route path={PATHS.manageTransaction} element={<MainLayout />}>
                 <Route index element={<TransactionPage />} />
+              </Route>
+              <Route path={PATHS.manageSpendingLimits} element={<MainLayout />}>
+                <Route index element={<SpendingLimitsPage />} />
               </Route>
               <Route path={PATHS.manageWallet} element={<MainLayout />}>
                 <Route index element={<WalletPage />} />

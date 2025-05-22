@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import "../../../assets/HomePage.css"
 import Toast from "../../common/Toast"
+import PATHS from "../../../constants/path"
 
 const HomePage = () => {
   const [summary, setSummary] = useState({
@@ -178,7 +179,7 @@ const HomePage = () => {
         <div className="dashboard-card recent-transactions">
           <div className="card-header">
             <h2>Giao dịch gần đây</h2>
-            <a href="/transactions" className="view-all">
+            <a href={PATHS.manageTransaction} className="view-all">
               Xem tất cả
             </a>
           </div>
@@ -212,7 +213,7 @@ const HomePage = () => {
         <div className="dashboard-card spending-limits">
           <div className="card-header">
             <h2>Mức chi tiêu</h2>
-            <a href="/spending-limits" className="view-all">
+            <a href={PATHS.manageSpendingLimits} className="view-all">
               Xem tất cả
             </a>
           </div>
@@ -254,7 +255,7 @@ const HomePage = () => {
         <div className="dashboard-card categories">
           <div className="card-header">
             <h2>Danh mục</h2>
-            <a href="/categories" className="view-all">
+            <a href={PATHS.manageCategory} className="view-all">
               Xem tất cả
             </a>
           </div>

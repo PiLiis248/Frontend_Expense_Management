@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { Provider } from "react-redux";
 import store from "./redux/store";
 import { AuthProvider } from "./constants/AuthContext";
+import '@fortawesome/fontawesome-free/css/all.css'
 import "./App.css";
 
 // Components

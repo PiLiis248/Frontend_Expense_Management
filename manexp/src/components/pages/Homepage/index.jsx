@@ -140,7 +140,7 @@ const HomePage = () => {
         />
       )}
 
-      <h1 className="page-title">Tổng quan</h1>
+      {/* <h1 className="page-title">Tổng quan</h1> */}
 
       <div className="summary-cards">
         <div className="summary-card income">

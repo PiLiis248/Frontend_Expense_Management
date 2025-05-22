@@ -52,3 +52,8 @@
 .password-toggle:hover {
   background-color: #e1e1e1;
 }
+
+.password-toggle:focus {
+  outline: none;
+  box-shadow: none;
+}

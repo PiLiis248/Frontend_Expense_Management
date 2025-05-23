@@ -33,7 +33,8 @@ function App() {
             </Route>
 
             {/* Private Routes */}
-            <Route element={<PrivateRoute />}>
+            {/* <Route element={<PrivateRoute />}> */}
+            <Route>
               <Route path={PATHS.homepage} element={<MainLayout />}>
                 <Route index element={<HomePage />} />
               </Route>

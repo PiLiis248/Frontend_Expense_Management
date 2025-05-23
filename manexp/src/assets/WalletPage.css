@@ -1,0 +1,198 @@
+.money-sources-page {
+  padding: 20px 0;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.money-sources-page>.page-header>button {
+    width: 11rem;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--dark-color);
+}
+
+.source-form-container {
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.source-form h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+  color: var(--dark-color);
+}
+
+.checkbox-group {
+  margin-top: 10px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  margin-right: 10px;
+}
+
+.no-sources {
+  text-align: center;
+  padding: 50px 20px;
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  color: #777;
+}
+
+.sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.source-card {
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+}
+
+.source-card.inactive {
+  opacity: 0.7;
+}
+
+.source-header {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.source-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: rgba(52, 152, 219, 0.1);
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+  font-size: 1.5rem;
+}
+
+.source-title {
+  flex: 1;
+}
+
+.source-title h3 {
+  margin: 0 0 5px;
+  font-size: 1.2rem;
+}
+
+.source-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.source-badge.cash {
+  background-color: rgba(46, 204, 113, 0.1);
+  color: var(--secondary-color);
+}
+
+.source-badge.bank {
+  background-color: rgba(52, 152, 219, 0.1);
+  color: var(--primary-color);
+}
+
+.source-badge.e-wallet {
+  background-color: rgba(155, 89, 182, 0.1);
+  color: #9b59b6;
+}
+
+.source-badge.credit-card {
+  background-color: rgba(230, 126, 34, 0.1);
+  color: #e67e22;
+}
+
+.source-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-icon.toggle {
+    background: none;
+  font-size: 1.2rem;
+}
+
+.btn-icon.toggle.active {
+  color: var(--secondary-color);
+}
+
+.btn-icon.toggle.inactive {
+  color: #95a5a6;
+}
+
+.source-details {
+  padding: 20px;
+}
+
+.source-balance {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+.source-balance .label {
+  font-size: 0.9rem;
+  color: #777;
+  margin-bottom: 5px;
+}
+
+.source-balance .value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--dark-color);
+}
+
+.source-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.source-stats {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.source-transactions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #555;
+}
+
+@media (max-width: 768px) {
+  .sources-grid {
+    grid-template-columns: 1fr;
+  }
+}

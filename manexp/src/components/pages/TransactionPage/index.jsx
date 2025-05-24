@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Button from "../../common/Button"
 import InputField from "../../common/InputField"
 import Toast from "../../common/Toast"
+import ConfirmModal from "../../common/ConfirmModal"
 import "../../../assets/TransactionPage.css"
 
 const TransactionsPage = () => {
@@ -15,6 +16,7 @@ const TransactionsPage = () => {
   const [toast, setToast] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editData, setEditData] = useState({})
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, transactionId: null, transactionInfo: null })
   const [formData, setFormData] = useState({
     amount: "",
     description: "",
@@ -254,10 +256,31 @@ const TransactionsPage = () => {
     showToast("Giao dịch đã được thêm thành công!", "success")
   }
 
-  // Handle delete transaction
-  const handleDeleteTransaction = (transactionId) => {
+  // Handle delete transaction request (show confirmation modal)
+  const handleDeleteTransactionRequest = (transaction) => {
+    setDeleteModal({
+      isOpen: true,
+      transactionId: transaction.id,
+      transactionInfo: {
+        description: transaction.description,
+        amount: formatCurrency(transaction.amount),
+        date: formatDate(transaction.transaction_date),
+        type: transaction.action === "income" ? "Thu nhập" : "Chi tiêu"
+      }
+    })
+  }
+
+  // Confirm delete transaction
+  const handleConfirmDelete = () => {
+    const transactionId = deleteModal.transactionId
     setTransactions(transactions.filter(t => t.id !== transactionId))
+    setDeleteModal({ isOpen: false, transactionId: null, transactionInfo: null })
     showToast("Giao dịch đã được xóa", "success")
+  }
+
+  // Cancel delete
+  const handleCancelDelete = () => {
+    setDeleteModal({ isOpen: false, transactionId: null, transactionInfo: null })
   }
 
   // Filter transactions
@@ -303,6 +326,22 @@ const TransactionsPage = () => {
           onClose={() => setToast(null)}
         />
       )}
+
+      {/* Delete confirmation modal */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title="Xác nhận xóa giao dịch"
+        message={deleteModal.transactionInfo ? 
+          `Bạn có chắc chắn muốn xóa giao dịch "${deleteModal.transactionInfo.description}" với số tiền ${deleteModal.transactionInfo.amount} không?` : 
+          "Bạn có chắc chắn muốn xóa giao dịch này không?"
+        }
+        confirmText="Xóa"
+        cancelText="Hủy"
+        confirmButtonClass="btn-danger"
+        warnings={["Hành động này không thể hoàn tác!"]}
+      />
 
       <div className="page-header">
         <h1 className="page-title">Quản lý giao dịch</h1>
@@ -670,7 +709,7 @@ const TransactionsPage = () => {
                             </Button>
                             <Button 
                               className="btn-icon delete"
-                              onClick={() => handleDeleteTransaction(transaction.id)}
+                              onClick={() => handleDeleteTransactionRequest(transaction)}
                             >
                               🗑
                             </Button>

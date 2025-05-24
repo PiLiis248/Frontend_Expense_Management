@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import Button from "../../common/Button" // Adjust path as needed
 import InputField from "../../common/InputField" // Adjust path as needed
 import Toast from "../../common/Toast" // Adjust path as needed
+import ConfirmModal from "../../common/ConfirmModal" // Add this import
 import "../../../assets/SpendingLimitsPage.css"
 
 const SpendingLimitsPage = () => {
@@ -23,6 +24,10 @@ const SpendingLimitsPage = () => {
   })
   const [editingId, setEditingId] = useState(null)
   const [toast, setToast] = useState(null)
+  
+  // Add states for ConfirmModal
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState(null)
 
   // Ref để scroll lên đầu trang
   const pageTopRef = useRef(null)
@@ -218,13 +223,27 @@ const SpendingLimitsPage = () => {
     }, 0)
   }
 
-  // Handle delete spending limit
-  const handleDelete = (id) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa mức chi tiêu này?")) {
-      const updatedLimits = spendingLimits.filter((limit) => limit.id !== id)
+  // Handle delete spending limit - Updated to use ConfirmModal
+  const handleDelete = (limit) => {
+    setItemToDelete(limit)
+    setShowConfirmModal(true)
+  }
+
+  // Confirm delete action
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      const updatedLimits = spendingLimits.filter((limit) => limit.id !== itemToDelete.id)
       setSpendingLimits(updatedLimits)
       showToast("Xóa mức chi tiêu thành công", "success")
     }
+    setShowConfirmModal(false)
+    setItemToDelete(null)
+  }
+
+  // Cancel delete action
+  const cancelDelete = () => {
+    setShowConfirmModal(false)
+    setItemToDelete(null)
   }
 
   // Handle toggle active status
@@ -275,6 +294,22 @@ const SpendingLimitsPage = () => {
           onClose={() => setToast(null)}
         />
       )}
+
+      {/* ConfirmModal for delete confirmation */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Xác nhận xóa mức chi tiêu"
+        message={itemToDelete ? `Bạn có chắc chắn muốn xóa mức chi tiêu cho danh mục "${itemToDelete.category.name}"?` : ""}
+        confirmText="Xóa"
+        cancelText="Hủy"
+        confirmButtonClass="btn-danger"
+        warnings={[
+          "Hành động này không thể hoàn tác.",
+          "Tất cả dữ liệu liên quan sẽ bị xóa vĩnh viễn."
+        ]}
+      />
 
       <div className="page-header">
         <h1 className="page-title">Quản lý mức chi tiêu</h1>
@@ -474,7 +509,7 @@ const SpendingLimitsPage = () => {
                       </Button>
                       <Button
                         className="btn-icon delete"
-                        onClick={() => handleDelete(limit.id)}
+                        onClick={() => handleDelete(limit)}
                         title="Xóa"
                       >
                         <i className="fas fa-trash"></i>

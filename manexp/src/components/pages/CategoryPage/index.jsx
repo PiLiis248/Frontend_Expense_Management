@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import Button from "../../common/Button" // Adjust path as needed
 import InputField from "../../common/InputField" // Adjust path as needed
 import Toast from "../../common/Toast" // Adjust path as needed
+import ConfirmModal from "../../common/ConfirmModal" // Import modal component
 import "../../../assets/CategoryPage.css"
 
 const CategoryPage = () => {
@@ -18,6 +19,7 @@ const CategoryPage = () => {
   const [editingId, setEditingId] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [toast, setToast] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // State cho dialog xác nhận xóa
   
   // Ref để scroll lên đầu trang
   const pageTopRef = useRef(null)
@@ -136,27 +138,71 @@ const CategoryPage = () => {
     }, 0)
   }
 
-  // Handle delete category
+  // Handle delete category với dialog xác nhận
   const handleDelete = (id) => {
+    const category = categories.find((cat) => cat.id === id)
+    if (!category) return
+
     // Check if category has children
-    const hasChildren = categories.some((category) => category.parent_id === id)
+    const childCategories = categories.filter((cat) => cat.parent_id === id)
+    const hasChildren = childCategories.length > 0
+
+    // Tạo thông báo xác nhận
+    let confirmMessage = `Hiện tại danh mục "${category.name}" đang có`
+    const warnings = []
 
     if (hasChildren) {
-      showToast("Không thể xóa danh mục này vì có danh mục con.", "error")
-      return
+      warnings.push(`Lưu ý: Tất cả ${childCategories.length} danh mục con cũng sẽ bị xóa.`)
     }
 
-    // Check if category has transactions
-    const category = categories.find((cat) => cat.id === id)
-    if (category && category.transaction_count > 0) {
-      showToast(`Không thể xóa danh mục này vì có ${category.transaction_count} giao dịch liên quan.`, "error")
-      return
+    if (category.transaction_count > 0) {
+      warnings.push(`Lưu ý: Tất cả ${category.transaction_count} giao dịch liên quan sẽ bị ảnh hưởng.`)
     }
 
-    // Delete category
-    const updatedCategories = categories.filter((category) => category.id !== id)
-    setCategories(updatedCategories)
-    showToast("Xóa danh mục thành công!", "success")
+    if (hasChildren || category.transaction_count > 0) {
+      const items = []
+      if (hasChildren) items.push(`${childCategories.length} danh mục con`)
+      if (category.transaction_count > 0) items.push(`${category.transaction_count} giao dịch`)
+      confirmMessage += ` ${items.join(' và ')}, bạn có chắc muốn xóa danh mục?`
+    } else {
+      confirmMessage = `Bạn có chắc muốn xóa danh mục "${category.name}"?`
+    }
+
+    // Hiển thị dialog xác nhận
+    setDeleteConfirm({
+      categoryId: id,
+      categoryName: category.name,
+      message: confirmMessage,
+      hasChildren,
+      transactionCount: category.transaction_count,
+      warnings
+    })
+  }
+
+  // Xử lý xác nhận xóa
+  const confirmDelete = () => {
+    const { categoryId, hasChildren } = deleteConfirm
+
+    if (hasChildren) {
+      // Nếu có danh mục con, xóa tất cả danh mục con trước
+      const updatedCategories = categories.filter((category) => 
+        category.id !== categoryId && category.parent_id !== categoryId
+      )
+      setCategories(updatedCategories)
+      showToast("Xóa danh mục và các danh mục con thành công!", "success")
+    } else {
+      // Chỉ xóa danh mục hiện tại
+      const updatedCategories = categories.filter((category) => category.id !== categoryId)
+      setCategories(updatedCategories)
+      showToast("Xóa danh mục thành công!", "success")
+    }
+
+    setDeleteConfirm(null)
+  }
+
+  // Hủy xóa
+  const cancelDelete = () => {
+    setDeleteConfirm(null)
   }
 
   // Get parent categories (categories with no parent)
@@ -186,6 +232,19 @@ const CategoryPage = () => {
           onClose={() => setToast(null)}
         />
       )}
+
+      {/* Delete confirmation modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Xác nhận xóa danh mục"
+        message={deleteConfirm?.message}
+        confirmText="Xác nhận xóa"
+        cancelText="Hủy"
+        confirmButtonClass="btn-danger"
+        warnings={deleteConfirm?.warnings || []}
+      />
 
       <div className="page-header">
         <h1 className="page-title">Quản lý danh mục</h1>

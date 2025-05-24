@@ -3,7 +3,7 @@
 }
 
 .page-title {
-  margin-bottom: 20px;
+  margin-bottom: 2rem !important;
   font-size: 1.8rem;
   color: var(--dark-color);
 }

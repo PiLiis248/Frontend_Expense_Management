@@ -2,7 +2,7 @@
 const PATHS = {
   login: "/login",
   register: "/register",
-  resetPassword: "/auth/new-password/:token",
+  resetPassword: "/reset-password",
   homepage: "/homepage",
   manageTransaction: "/transactions",
   manageCategory: "/categories",

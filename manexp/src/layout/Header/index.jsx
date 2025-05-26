@@ -5,19 +5,21 @@ import { useAuth } from "../../constants/AuthContext"
 import "../../assets/Header.css"
 import PATHS from "../../constants/path"
 
-// Import icons directly if you're not using Font Awesome via CDN
-// Uncomment the following line if you're using Font Awesome npm package
-// import '@fortawesome/fontawesome-free/css/all.min.css';
-
 const Header = ({ toggleSidebar }) => {
-  const { currentUser, logout } = useAuth()
+  const { user, logout } = useAuth() // Sửa từ currentUser thành user
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
 
-  const handleLogout = () => {
-    logout()
-    navigate(PATHS.login)
+  const handleLogout = async () => {
+    try {
+      // Gọi logout từ AuthContext (đã có navigate bên trong)
+      await logout()
+    } catch (error) {
+      console.error("Logout failed:", error)
+      // Vẫn navigate về login nếu có lỗi
+      navigate(PATHS.login)
+    }
   }
 
   const toggleDropdown = () => {
@@ -50,7 +52,9 @@ const Header = ({ toggleSidebar }) => {
       <div className="header-right">
         <div className="user-dropdown" ref={dropdownRef}>
           <button className="user-dropdown-toggle" onClick={toggleDropdown}>
-            <span className="user-name">{currentUser?.full_name || "User"}</span>
+            <span className="user-name">
+              {user?.fullName || "User"}
+            </span>
             <span className="dropdown-arrow">{dropdownOpen ? "▲" : "▼"}</span>
           </button>
           {dropdownOpen && (

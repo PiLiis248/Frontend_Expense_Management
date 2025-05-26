@@ -59,6 +59,25 @@ const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // Load remembered credentials on component mount
+  useEffect(() => {
+    const rememberedCredentials = localStorage.getItem("rememberedLogin");
+    if (rememberedCredentials) {
+      try {
+        const { phone, password } = JSON.parse(rememberedCredentials);
+        setFormData(prev => ({
+          ...prev,
+          phone: phone || "",
+          password: password || "",
+          rememberMe: true
+        }));
+      } catch (error) {
+        console.error("Error loading remembered credentials:", error);
+        localStorage.removeItem("rememberedLogin");
+      }
+    }
+  }, []);
+
   // Handle countdown timer for reset password
   useEffect(() => {
     let timer;
@@ -115,6 +134,17 @@ const LoginPage = () => {
     try {
       const { phone, password, rememberMe } = formData;
       await login(phone, password, rememberMe);
+
+      // Save credentials if remember me is checked
+      if (rememberMe) {
+        localStorage.setItem("rememberedLogin", JSON.stringify({
+          phone,
+          password
+        }));
+      } else {
+        // Remove remembered credentials if remember me is unchecked
+        localStorage.removeItem("rememberedLogin");
+      }
 
       setToast({
         visible: true,

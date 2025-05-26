@@ -13,7 +13,8 @@ import PATHS from "../../../constants/path";
 // Schema validation for reset password form
 const resetPasswordSchema = Yup.object({
   newPassword: Yup.string()
-    .min(6, "Mật khẩu phải có ít nhất 6 ký tự")
+    .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
+    .max(30, "Mật khẩu phải có nhiều nhất 30 ký tự")
     .required("Vui lòng nhập mật khẩu mới"),
   confirmPassword: Yup.string()
     .oneOf([Yup.ref("newPassword")], "Mật khẩu không khớp")
@@ -35,6 +36,8 @@ const ResetPasswordPage = () => {
 
   // UI states
   const [loading, setLoading] = useState(false);
+  const [validatingToken, setValidatingToken] = useState(true); // Thêm state để track việc validate token
+  const [tokenValid, setTokenValid] = useState(false); // State để track token có hợp lệ không
   const [toast, setToast] = useState({ visible: false, message: "", type: "" });
   const [resetSuccess, setResetSuccess] = useState(false);
   const [countdown, setCountdown] = useState(3);
@@ -56,18 +59,46 @@ const ResetPasswordPage = () => {
     return () => clearTimeout(timer);
   }, [resetSuccess, countdown, navigate]);
 
-  // Check if token exists
+  // Validate token when component mounts
   useEffect(() => {
-    if (!token) {
-      setToast({
-        visible: true,
-        message: "Đường dẫn không hợp lệ hoặc đã hết hạn",
-        type: "error",
-      });
-      setTimeout(() => {
-        navigate(PATHS.login);
-      }, 2000);
-    }
+    const validateToken = async () => {
+      if (!token) {
+        setToast({
+          visible: true,
+          message: "Đường dẫn không hợp lệ hoặc thiếu token",
+          type: "error",
+        });
+        setValidatingToken(false);
+        setTimeout(() => {
+          navigate(PATHS.login);
+        }, 2000);
+        return;
+      }
+
+      try {
+        setValidatingToken(true);
+        await authService.validateResetToken(token);
+        
+        // Nếu validate thành công
+        setTokenValid(true);
+        setValidatingToken(false);
+      } catch (error) {
+        // Nếu validate thất bại (token hết hạn hoặc không tồn tại)
+        setToast({
+          visible: true,
+          message: error.response?.data?.message || "Token đã hết hạn hoặc không hợp lệ",
+          type: "error",
+        });
+        setTokenValid(false);
+        setValidatingToken(false);
+        
+        setTimeout(() => {
+          navigate(PATHS.login);
+        }, 3000);
+      }
+    };
+
+    validateToken();
   }, [token, navigate]);
 
   // Handle form input changes
@@ -109,7 +140,7 @@ const ResetPasswordPage = () => {
     
     // Validate form before submitting
     const isValid = await validateForm();
-    if (!isValid || !token) return;
+    if (!isValid || !token || !tokenValid) return;
     
     setLoading(true);
 
@@ -125,7 +156,7 @@ const ResetPasswordPage = () => {
     } catch (err) {
       setToast({
         visible: true,
-        message: err.response?.data?.message || "Đặt lại mật khẩu thất bại. Đường dẫn có thể đã hết hạn.",
+        message: err.response?.data?.message || "Đặt lại mật khẩu thất bại. Token có thể đã hết hạn.",
         type: "error",
       });
     } finally {
@@ -137,6 +168,45 @@ const ResetPasswordPage = () => {
   const closeToast = () => {
     setToast({ ...toast, visible: false });
   };
+
+  // Render loading state while validating token
+  if (validatingToken) {
+    return (
+      <div className="reset-password-container">
+        <div className="reset-password-card">
+          <div className="reset-password-header">
+            <h2>Đang kiểm tra...</h2>
+            <p>Vui lòng chờ trong giây lát</p>
+          </div>
+          <div className="loading-spinner">
+            <p>Đang kiểm tra tính hợp lệ của đường dẫn...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render form if token is invalid
+  if (!tokenValid) {
+    return (
+      <div className="reset-password-container">
+        <div className="reset-password-card">
+          <div className="reset-password-header">
+            <h2>Đường dẫn không hợp lệ</h2>
+            <p>Token đã hết hạn hoặc không tồn tại</p>
+          </div>
+        </div>
+        {toast.visible && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            duration={3000}
+            onClose={closeToast}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="reset-password-container">
@@ -177,7 +247,7 @@ const ResetPasswordPage = () => {
 
             <Button
               type="submit"
-              disabled={loading || !token}
+              disabled={loading || !token || !tokenValid}
               className="btn btn-primary"
             >
               {loading ? "Đang xử lý..." : "Xác nhận"}

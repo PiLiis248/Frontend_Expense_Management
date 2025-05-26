@@ -4,79 +4,110 @@ import authService from "../services/authService";
 import tokenMethod from "../api/token";
 import PATHS from "../constants/path";
 
-// Create context with default values
+// Tạo Auth Context
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Check for existing authentication on mount
+  // Kiểm tra đăng nhập khi component mount
   useEffect(() => {
-    const checkAuth = () => {
+    const initializeAuth = async () => {
       const storedUser = tokenMethod.get();
-      if (storedUser) {
-        setUser(storedUser);
-        setIsAuthenticated(true);
-      }
-      setIsLoading(false);
-    };
-    
-    checkAuth();
-  }, []);
-
-  const login = async (phone, password, rememberMe) => {
-    try {
-      const userData = await authService.login(phone, password, rememberMe);
       
-      if (!userData || !userData.user) {
-        throw new Error("Your account has not been registered!");
+      if (storedUser && storedUser.token && storedUser.user) {
+        // Nếu có token hợp lệ, set user và chuyển đến homepage
+        setUser(storedUser.user);
+        setIsAuthenticated(true);
+        setIsLoading(false);
+        
+        // Nếu đang ở trang login thì chuyển đến homepage
+        if (window.location.pathname === PATHS.login) {
+          navigate(PATHS.homepage);
+        }
+      } else {
+        // Nếu không có token, kiểm tra remembered credentials
+        const rememberedCredentials = localStorage.getItem("rememberedLogin");
+        if (rememberedCredentials) {
+          try {
+            const { phone, password } = JSON.parse(rememberedCredentials);
+            if (phone && password) {
+              // Tự động đăng nhập với credentials đã lưu
+              await login(phone, password, true, true); // silent login
+            }
+          } catch (error) {
+            console.error("Auto login failed:", error);
+            localStorage.removeItem("rememberedLogin");
+          }
+        }
+        setIsLoading(false);
       }
-  
-    //   if (userData.user.status !== "ACTIVE") {
-    //     throw new Error("Your account is not activated. Please check your email.");
-    //   }
-  
-      setUser(userData);
+    };
+
+    initializeAuth();
+  }, [navigate]);
+
+  // ✅ Đăng nhập
+  const login = async (phoneNumber, password, rememberMe, silent = false) => {
+    try {
+      const authData = await authService.login(phoneNumber, password, rememberMe);
+
+      if (!authData || !authData.token || !authData.user) {
+        throw new Error("Invalid response from server!");
+      }
+
+      setUser(authData.user);
       setIsAuthenticated(true);
+      
+      // Navigate đến homepage (cả silent và manual login)
       navigate(PATHS.homepage);
-      return userData;
+      
+      return authData;
     } catch (error) {
-      throw new Error(error.message || "Invalid username or password. Register or try again!"); 
+      // Nếu auto login thất bại, xóa remembered credentials
+      if (silent) {
+        localStorage.removeItem("rememberedLogin");
+      }
+      throw error;
     }
   };
 
+  // ✅ Đăng xuất
   const logout = () => {
-    tokenMethod.remove(); // Xóa token khỏi Storage
+    tokenMethod.remove();
+    localStorage.removeItem("rememberedLogin"); // Xóa remembered credentials
     setUser(null);
     setIsAuthenticated(false);
-    navigate(PATHS.login); // Điều hướng về trang login
+    navigate(PATHS.login);
   };
 
+  // ✅ Đăng ký
   const register = async (payload) => {
     try {
       const response = await authService.register(payload);
       return response;
     } catch (error) {
       if (error.message.includes("Account has been registered")) {
-        throw error; 
+        throw error;
       }
-      throw new Error(error.response?.data?.message || "Something went wrong during registration.");
+      throw new Error(
+        error.response?.data?.message || "Something went wrong during registration."
+      );
     }
   };
-  
-  // Provide the context value
+
   const contextValue = {
     user,
     isAuthenticated,
     isLoading,
     login,
     logout,
-    register
+    register,
   };
-  
+
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
@@ -84,14 +115,12 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use the auth context
+// ✅ Custom hook để dùng Auth
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  
   return context;
 };
 

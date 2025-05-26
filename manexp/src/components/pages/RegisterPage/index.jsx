@@ -23,7 +23,8 @@ const registerSchema = Yup.object({
     .length(10, "Số điện thoại phải đủ 10 số")
     .required("Vui lòng nhập số điện thoại"),
   password: Yup.string()
-    .min(6, "Mật khẩu phải có ít nhất 6 ký tự")
+    .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
+    .max(30, "Mật khẩu phải có nhiều nhất 30 ký tự")
     .required("Vui lòng nhập mật khẩu"),
   confirm_password: Yup.string()
     .oneOf([Yup.ref("password"), null], "Mật khẩu không khớp")
@@ -92,25 +93,31 @@ const RegisterPage = () => {
   // Handle registration form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate form before submitting
+
     const isValid = await validateForm();
     if (!isValid) return;
-    
+
     setLoading(true);
 
     try {
-      await register(formData);
-      
+      // Chuyển đổi key đúng với backend
+      const payload = {
+        fullName: formData.full_name,
+        email: formData.email,
+        phoneNumber: formData.phone_number,
+        password: formData.password,
+      };
+
+      await register(payload);
+
       setToast({
         visible: true,
         message: "Đăng ký thành công!",
         type: "success",
       });
 
-      // Redirect after showing success message
       setTimeout(() => {
-        navigate("/");
+        navigate(PATHS.login);
       }, 1500);
     } catch (err) {
       setToast({

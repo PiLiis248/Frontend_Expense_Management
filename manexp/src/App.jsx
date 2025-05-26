@@ -33,30 +33,30 @@ function App() {
             </Route>
 
             {/* Private Routes */}
-            {/* <Route element={<PrivateRoute />}> */}
-            <Route>
-              <Route path={PATHS.homepage} element={<MainLayout />}>
-                <Route index element={<HomePage />} />
+            <Route element={<PrivateRoute />}>
+              <Route>
+                <Route path={PATHS.homepage} element={<MainLayout />}>
+                  <Route index element={<HomePage />} />
+                </Route>
+                <Route path={PATHS.manageCategory} element={<MainLayout />}>
+                  <Route index element={<CategoryPage />} />
+                </Route>
+                <Route path={PATHS.manageTransaction} element={<MainLayout />}>
+                  <Route index element={<TransactionPage />} />
+                </Route>
+                <Route path={PATHS.manageSpendingLimits} element={<MainLayout />}>
+                  <Route index element={<SpendingLimitsPage />} />
+                </Route>
+                <Route path={PATHS.manageWallet} element={<MainLayout />}>
+                  <Route index element={<WalletPage />} />
+                </Route>
+                <Route path={PATHS.profile} element={<MainLayout />}>
+                  <Route index element={<ProfilePage />} />
+                </Route>
+                {/* Redirect any other path to login */}
+                <Route path="*" element={<Navigate to={PATHS.homepage} replace />} />
               </Route>
-              <Route path={PATHS.manageCategory} element={<MainLayout />}>
-                <Route index element={<CategoryPage />} />
-              </Route>
-              <Route path={PATHS.manageTransaction} element={<MainLayout />}>
-                <Route index element={<TransactionPage />} />
-              </Route>
-              <Route path={PATHS.manageSpendingLimits} element={<MainLayout />}>
-                <Route index element={<SpendingLimitsPage />} />
-              </Route>
-              <Route path={PATHS.manageWallet} element={<MainLayout />}>
-                <Route index element={<WalletPage />} />
-              </Route>
-              <Route path={PATHS.profile} element={<MainLayout />}>
-                <Route index element={<ProfilePage />} />
-              </Route>
-              {/* Redirect any other path to login */}
-              <Route path="*" element={<Navigate to={PATHS.homepage} replace />} />
             </Route>
-            
           </Routes>
         </AuthProvider>
       </Router>

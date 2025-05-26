@@ -90,12 +90,13 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.register(payload);
       return response;
     } catch (error) {
-      if (error.message.includes("Account has been registered")) {
-        throw error;
-      }
-      throw new Error(
-        error.response?.data?.message || "Something went wrong during registration."
-      );
+      const errorData = error.response?.data;
+      const errorMessage =
+        errorData
+          ? Object.values(errorData).join(" | ") // Gộp tất cả lỗi thành 1 chuỗi, cách nhau bằng " | "
+          : "Something went wrong during registration.";
+
+      throw new Error(errorMessage);
     }
   };
 

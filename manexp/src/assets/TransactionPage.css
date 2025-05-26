@@ -453,9 +453,116 @@ input, .edit-select {
   color: #666;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bulk-delete-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bulk-delete-btn:hover {
+  background-color: #c82333;
+}
+
+.select-all-checkbox,
+.transaction-checkbox {
+  cursor: pointer;
+  transform: scale(1.2);
+}
+
+.transactions-table th:first-child,
+.transactions-table td:first-child {
+  width: 40px;
+  text-align: center;
+}
+
+.select-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.select-page-btn,
+.deselect-page-btn {
+  font-size: 10px;
+  padding: 2px 4px;
+  border: 1px solid #ddd;
+  background: #f8f9fa;
+  border-radius: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.select-page-btn:hover {
+  background: #e9ecef;
+}
+
+.deselect-page-btn {
+  color: black;
+  background: #fff3cd;
+  border: none;
+}
+
+.deselect-page-btn:hover {
+  background: #ffeaa7;
+  border: none;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.selection-info {
+  font-size: 0.9rem;
+  color: #6c757d;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cross-page-selection {
+  font-size: 0.8rem;
+  color: #495057;
+  font-style: italic;
+}
+
+.selection-hint {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
 .transactions-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+/* Highlight selected rows across pages */
+.transactions-table tbody tr.selected-cross-page {
+  background-color: #e7f3ff;
+}
+
+.transactions-table tbody tr.selected-cross-page td {
+  border-color: #b3d9ff;
 }

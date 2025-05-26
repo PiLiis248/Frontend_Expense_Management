@@ -11,6 +11,7 @@ const TransactionsPage = () => {
   const [transactions, setTransactions] = useState([])
   const [categories, setCategories] = useState([])
   const [moneySources, setMoneySources] = useState([])
+  const [selectedTransactions, setSelectedTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [toast, setToast] = useState(null)
@@ -347,55 +348,158 @@ const TransactionsPage = () => {
 
   // Confirm delete transaction
   const handleConfirmDelete = () => {
-    const transactionId = deleteModal.transactionId
-    setTransactions(transactions.filter(t => t.id !== transactionId))
+    if (deleteModal.transactionId === null) {
+      // Bulk delete
+      setTransactions(transactions.filter(t => !selectedTransactions.includes(t.id)))
+      setSelectedTransactions([]) // Clear selection after delete
+      showToast(`Đã xóa ${deleteModal.transactionInfo.count} giao dịch`, "success")
+    } else {
+      // Single delete
+      const transactionId = deleteModal.transactionId
+      setTransactions(transactions.filter(t => t.id !== transactionId))
+      showToast("Giao dịch đã được xóa", "success")
+    }
     setDeleteModal({ isOpen: false, transactionId: null, transactionInfo: null })
-    showToast("Giao dịch đã được xóa", "success")
   }
+
+  const applyFilters = (transactionList) => {
+    return transactionList.filter((transaction) => {
+      if (filters.action !== "all" && transaction.action !== filters.action) return false
+      if (filters.category_id !== "all" && transaction.category.id !== Number.parseInt(filters.category_id)) return false
+      if (filters.money_source_id !== "all" && transaction.money_source.id !== Number.parseInt(filters.money_source_id)) return false
+      if (filters.date_from && new Date(transaction.transaction_date) < new Date(filters.date_from)) return false
+      if (filters.date_to && new Date(transaction.transaction_date) > new Date(filters.date_to)) return false
+      if (filters.min_amount && transaction.amount < Number.parseFloat(filters.min_amount)) return false
+      if (filters.max_amount && transaction.amount > Number.parseFloat(filters.max_amount)) return false
+      return true
+    })
+  }
+
 
   // Cancel delete
   const handleCancelDelete = () => {
     setDeleteModal({ isOpen: false, transactionId: null, transactionInfo: null })
   }
 
+  // Handle select all checkbox
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      // Select all FILTERED transactions (not just current page)
+      const allFilteredIds = filteredTransactions.map(t => t.id)
+      setSelectedTransactions(allFilteredIds)
+    } else {
+      // Deselect all
+      setSelectedTransactions([])
+    }
+  }
+
+  // check selected all state
+  const getSelectAllState = () => {
+    const currentPageIds = currentTransactions.map(t => t.id)
+    const allFilteredIds = filteredTransactions.map(t => t.id)
+    
+    const selectedInCurrentPage = currentPageIds.filter(id => selectedTransactions.includes(id)).length
+    const selectedInAllFiltered = allFilteredIds.filter(id => selectedTransactions.includes(id)).length
+    
+    return {
+      currentPageSelected: selectedInCurrentPage,
+      currentPageTotal: currentPageIds.length,
+      allFilteredSelected: selectedInAllFiltered,
+      allFilteredTotal: allFilteredIds.length,
+      isCurrentPageFullySelected: selectedInCurrentPage === currentPageIds.length && currentPageIds.length > 0,
+      isAllFilteredSelected: selectedInAllFiltered === allFilteredIds.length && allFilteredIds.length > 0
+    }
+  }
+
+  // Select to current page
+  const handleSelectCurrentPage = () => {
+    const currentPageIds = currentTransactions.map(t => t.id)
+    const notInCurrentPage = selectedTransactions.filter(id => !currentPageIds.includes(id))
+    setSelectedTransactions([...notInCurrentPage, ...currentPageIds])
+  }
+
+  // Deselect current page
+  const handleDeselectCurrentPage = () => {
+    const currentPageIds = currentTransactions.map(t => t.id)
+    setSelectedTransactions(selectedTransactions.filter(id => !currentPageIds.includes(id)))
+  }
+
+  // Handle individual checkbox
+  const handleSelectTransaction = (transactionId) => {
+    setSelectedTransactions(prev => {
+      if (prev.includes(transactionId)) {
+        return prev.filter(id => id !== transactionId)
+      } else {
+        return [...prev, transactionId]
+      }
+    })
+  }
+
+  // Handle bulk delete request
+  const handleBulkDeleteRequest = () => {
+    const selectedTransactionData = transactions.filter(t => selectedTransactions.includes(t.id))
+    
+    // Group by page for display
+    const selectedByPage = {}
+    selectedTransactionData.forEach(transaction => {
+      const transactionIndex = filteredTransactions.findIndex(t => t.id === transaction.id)
+      const pageNum = Math.floor(transactionIndex / itemsPerPage) + 1
+      
+      if (!selectedByPage[pageNum]) {
+        selectedByPage[pageNum] = []
+      }
+      selectedByPage[pageNum].push(transaction)
+    })
+    
+    setDeleteModal({
+      isOpen: true,
+      transactionId: null,
+      transactionInfo: {
+        count: selectedTransactions.length,
+        transactions: selectedTransactionData,
+        byPage: selectedByPage
+      }
+    })
+  }
+
   // Filter transactions
   const filteredTransactions = transactions.filter((transaction) => {
-  // Filter by action
-  if (filters.action !== "all" && transaction.action !== filters.action) {
-    return false
-  }
+    // Filter by action
+    if (filters.action !== "all" && transaction.action !== filters.action) {
+      return false
+    }
 
-  // Filter by category
-  if (filters.category_id !== "all" && transaction.category.id !== Number.parseInt(filters.category_id)) {
-    return false
-  }
+    // Filter by category
+    if (filters.category_id !== "all" && transaction.category.id !== Number.parseInt(filters.category_id)) {
+      return false
+    }
 
-  // Filter by money source
-  if (filters.money_source_id !== "all" && transaction.money_source.id !== Number.parseInt(filters.money_source_id)) {
-    return false
-  }
+    // Filter by money source
+    if (filters.money_source_id !== "all" && transaction.money_source.id !== Number.parseInt(filters.money_source_id)) {
+      return false
+    }
 
-  // Filter by date range
-  if (filters.date_from && new Date(transaction.transaction_date) < new Date(filters.date_from)) {
-    return false
-  }
+    // Filter by date range
+    if (filters.date_from && new Date(transaction.transaction_date) < new Date(filters.date_from)) {
+      return false
+    }
 
-  if (filters.date_to && new Date(transaction.transaction_date) > new Date(filters.date_to)) {
-    return false
-  }
+    if (filters.date_to && new Date(transaction.transaction_date) > new Date(filters.date_to)) {
+      return false
+    }
 
-  // Filter by minimum amount
-  if (filters.min_amount && transaction.amount < Number.parseFloat(filters.min_amount)) {
-    return false
-  }
+    // Filter by minimum amount
+    if (filters.min_amount && transaction.amount < Number.parseFloat(filters.min_amount)) {
+      return false
+    }
 
-  // Filter by maximum amount
-  if (filters.max_amount && transaction.amount > Number.parseFloat(filters.max_amount)) {
-    return false
-  }
+    // Filter by maximum amount
+    if (filters.max_amount && transaction.amount > Number.parseFloat(filters.max_amount)) {
+      return false
+    }
 
-  return true
-})
+    return true
+  })
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage)
@@ -461,6 +565,15 @@ const TransactionsPage = () => {
     return <div className="loading">Đang tải...</div>
   }
 
+  const getBulkDeleteMessage = () => {
+    if (!deleteModal.transactionInfo) return ""
+    
+    const { count, byPage } = deleteModal.transactionInfo
+    const pageInfo = Object.keys(byPage).map(page => `Trang ${page}: ${byPage[page].length} giao dịch`).join(", ")
+    
+    return `Bạn có chắc chắn muốn xóa ${count} giao dịch đã chọn không?\n\nChi tiết: ${pageInfo}`
+  }
+
   return (
     <div className="transactions-page">
       {/* Toast notification */}
@@ -477,11 +590,8 @@ const TransactionsPage = () => {
         isOpen={deleteModal.isOpen}
         onClose={handleCancelDelete}
         onConfirm={handleConfirmDelete}
-        title="Xác nhận xóa giao dịch"
-        message={deleteModal.transactionInfo ? 
-          `Bạn có chắc chắn muốn xóa giao dịch "${deleteModal.transactionInfo.description}" với số tiền ${deleteModal.transactionInfo.amount} không?` : 
-          "Bạn có chắc chắn muốn xóa giao dịch này không?"
-        }
+        title={deleteModal.transactionId === null ? "Xác nhận xóa nhiều giao dịch" : "Xác nhận xóa giao dịch"}
+        message={getBulkDeleteMessage}
         confirmText="Xóa"
         cancelText="Hủy"
         confirmButtonClass="btn-danger"
@@ -754,12 +864,48 @@ const TransactionsPage = () => {
 
       <div className="transactions-list">
         <div className="transactions-header">
-          <h3>Danh sách giao dịch ({filteredTransactions.length})</h3>
-          {totalPages > 1 && (
-            <div className="pagination-info">
-              Trang {currentPage} / {totalPages}
-            </div>
-          )}
+          <div className="header-left">
+            <h3>Danh sách giao dịch ({filteredTransactions.length})</h3>
+            {selectedTransactions.length > 0 && (
+              <div className="selection-info">
+                Đã chọn: {selectedTransactions.length} / {filteredTransactions.length}
+                {(() => {
+                  const state = getSelectAllState()
+                  const selectedInCurrentPage = state.currentPageSelected
+                  const currentPageTotal = state.currentPageTotal
+                  
+                  if (selectedTransactions.length > selectedInCurrentPage) {
+                    return (
+                      <span className="cross-page-selection">
+                        (Bao gồm {selectedInCurrentPage} trong trang này và {selectedTransactions.length - selectedInCurrentPage} từ trang khác)
+                      </span>
+                    )
+                  }
+                  return null
+                })()}
+              </div>
+            )}
+          </div>
+          <div className="header-actions">
+            {selectedTransactions.length >= 2 && (
+              <Button 
+                className="btn btn-danger bulk-delete-btn"
+                onClick={handleBulkDeleteRequest}
+              >
+                Xóa {selectedTransactions.length} giao dịch
+              </Button>
+            )}
+            {selectedTransactions.length >= 1 && selectedTransactions.length < 2 && (
+              <div className="selection-hint">
+                Chọn ít nhất 2 giao dịch để xóa nhiều
+              </div>
+            )}
+            {totalPages > 1 && (
+              <div className="pagination-info">
+                Trang {currentPage} / {totalPages}
+              </div>
+            )}
+          </div>
         </div>
 
         {filteredTransactions.length === 0 ? (
@@ -772,6 +918,49 @@ const TransactionsPage = () => {
               <table className="transactions-table">
                 <thead>
                   <tr>
+                    <th>
+                      <div className="select-header">
+                        <input
+                          type="checkbox"
+                          onChange={handleSelectAll}
+                          checked={getSelectAllState().isAllFilteredSelected}
+                          ref={(el) => {
+                            if (el) {
+                              const state = getSelectAllState()
+                              el.indeterminate = state.allFilteredSelected > 0 && !state.isAllFilteredSelected
+                            }
+                          }}
+                          className="select-all-checkbox"
+                          title={`Chọn tất cả ${filteredTransactions.length} giao dịch`}
+                        />
+                        {(() => {
+                          const state = getSelectAllState()
+                          if (state.currentPageSelected > 0 && !state.isCurrentPageFullySelected) {
+                            return (
+                              <button 
+                                className="select-page-btn"
+                                onClick={handleSelectCurrentPage}
+                                title="Chọn tất cả trang này"
+                              >
+                                Chọn trang
+                              </button>
+                            )
+                          }
+                          if (state.isCurrentPageFullySelected && state.currentPageTotal < state.allFilteredTotal) {
+                            return (
+                              <button 
+                                className="deselect-page-btn"
+                                onClick={handleDeselectCurrentPage}
+                                title="Bỏ chọn trang này"
+                              >
+                                Bỏ chọn trang
+                              </button>
+                            )
+                          }
+                          return null
+                        })()}
+                      </div>
+                    </th>
                     <th>Ngày</th>
                     <th>Mô tả</th>
                     <th>Danh mục</th>
@@ -781,8 +970,21 @@ const TransactionsPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentTransactions.map((transaction) => (
-                    <tr key={transaction.id} className={transaction.action}>
+                  {currentTransactions.map((transaction) => {
+                    const isSelected = selectedTransactions.includes(transaction.id)
+                    return (
+                      <tr 
+                        key={transaction.id} 
+                        className={`${transaction.action} ${isSelected ? 'selected-cross-page' : ''}`}
+                      >
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleSelectTransaction(transaction.id)}
+                            className="transaction-checkbox"
+                          />
+                        </td>
                       <td>
                         {editingId === transaction.id ? (
                           <input
@@ -796,18 +998,18 @@ const TransactionsPage = () => {
                           formatDate(transaction.transaction_date)
                         )}
                       </td>
+                      {/* Các cột khác giữ nguyên như cũ */}
                       <td>
                         {editingId === transaction.id ? (
                           <input
-                            type="text"
-                            name="description"
-                            value={editData.description}
+                            type="date"
+                            name="transaction_date"
+                            value={editData.transaction_date}
                             onChange={handleEditInputChange}
                             className="edit-input"
-                            placeholder="Mô tả"
                           />
                         ) : (
-                          transaction.description
+                          formatDate(transaction.transaction_date)
                         )}
                       </td>
                       <td>
@@ -909,7 +1111,7 @@ const TransactionsPage = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>

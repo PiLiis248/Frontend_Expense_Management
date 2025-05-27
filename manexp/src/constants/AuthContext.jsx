@@ -1,28 +1,41 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import authService from "../services/authService";
+import { useSelector, useDispatch } from "react-redux";
+// import authService from "../services/authService";
 import tokenMethod from "../api/token";
 import PATHS from "../constants/path";
+import { 
+  loginUser, 
+  logout as logoutAction, 
+  registerUser,
+  setUser,
+  setLoading,
+  loadRememberedCredentials 
+} from "../redux/authen/authSlice";
 
 // Tạo Auth Context
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  
+  // Get state from Redux store
+  const { user, isAuthenticated, isLoading } = useSelector((state) => state.auth);
 
   // Kiểm tra đăng nhập khi component mount
   useEffect(() => {
     const initializeAuth = async () => {
+      dispatch(setLoading(true));
+      
       const storedUser = tokenMethod.get();
       
       if (storedUser && storedUser.token && storedUser.user) {
-        // Nếu có token hợp lệ, set user và chuyển đến homepage
-        setUser(storedUser.user);
-        setIsAuthenticated(true);
-        setIsLoading(false);
+        // Nếu có token hợp lệ, set user
+        dispatch(setUser({
+          user: storedUser.user,
+          isAuthenticated: true
+        }));
         
         // Nếu đang ở trang login thì chuyển đến homepage
         if (window.location.pathname === PATHS.login) {
@@ -30,42 +43,45 @@ export const AuthProvider = ({ children }) => {
         }
       } else {
         // Nếu không có token, kiểm tra remembered credentials
-        const rememberedCredentials = localStorage.getItem("rememberedLogin");
-        if (rememberedCredentials) {
-          try {
-            const { phone, password } = JSON.parse(rememberedCredentials);
-            if (phone && password) {
-              // Tự động đăng nhập với credentials đã lưu
-              await login(phone, password, true, true); // silent login
-            }
-          } catch (error) {
-            console.error("Auto login failed:", error);
-            localStorage.removeItem("rememberedLogin");
+        try {
+          const result = await dispatch(loadRememberedCredentials()).unwrap();
+          if (result && result.phone && result.password) {
+            // Tự động đăng nhập với credentials đã lưu
+            await dispatch(loginUser({
+              phone: result.phone,
+              password: result.password,
+              rememberMe: true,
+              silent: true
+            })).unwrap();
+            
+            navigate(PATHS.homepage);
           }
+        } catch (error) {
+          console.error("Auto login failed:", error);
+          localStorage.removeItem("rememberedLogin");
         }
-        setIsLoading(false);
       }
+      
+      dispatch(setLoading(false));
     };
 
     initializeAuth();
-  }, [navigate]);
+  }, [navigate, dispatch]);
 
   // ✅ Đăng nhập
   const login = async (phoneNumber, password, rememberMe, silent = false) => {
     try {
-      const authData = await authService.login(phoneNumber, password, rememberMe);
+      const result = await dispatch(loginUser({
+        phone: phoneNumber,
+        password,
+        rememberMe,
+        silent
+      })).unwrap();
 
-      if (!authData || !authData.token || !authData.user) {
-        throw new Error("Invalid response from server!");
-      }
-
-      setUser(authData.user);
-      setIsAuthenticated(true);
-      
       // Navigate đến homepage (cả silent và manual login)
       navigate(PATHS.homepage);
       
-      return authData;
+      return result;
     } catch (error) {
       // Nếu auto login thất bại, xóa remembered credentials
       if (silent) {
@@ -78,25 +94,20 @@ export const AuthProvider = ({ children }) => {
   // ✅ Đăng xuất
   const logout = () => {
     tokenMethod.remove();
-    localStorage.removeItem("rememberedLogin"); // Xóa remembered credentials
-    setUser(null);
-    setIsAuthenticated(false);
+    localStorage.removeItem("rememberedLogin");
+    dispatch(logoutAction());
     navigate(PATHS.login);
   };
 
   // ✅ Đăng ký
   const register = async (payload) => {
+    // eslint-disable-next-line no-useless-catch
     try {
-      const response = await authService.register(payload);
-      return response;
+      const result = await dispatch(registerUser(payload)).unwrap();
+      return result;
     } catch (error) {
-      const errorData = error.response?.data;
-      const errorMessage =
-        errorData
-          ? Object.values(errorData).join(" | ") // Gộp tất cả lỗi thành 1 chuỗi, cách nhau bằng " | "
-          : "Something went wrong during registration.";
-
-      throw new Error(errorMessage);
+      // Error handling is done in the slice
+      throw error;
     }
   };
 

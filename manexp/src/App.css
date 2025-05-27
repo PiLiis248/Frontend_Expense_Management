@@ -156,3 +156,8 @@ body {
 .mb-4 {
   margin-bottom: 1rem;
 }
+
+select {
+  background: white;
+  color: black;
+}

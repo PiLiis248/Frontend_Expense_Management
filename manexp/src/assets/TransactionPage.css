@@ -504,6 +504,11 @@ input, .edit-select {
 
 .select-page-btn:hover {
   background: #e9ecef;
+  border-color: white;
+}
+
+.select-page-btn {
+  color: black;
 }
 
 .deselect-page-btn {

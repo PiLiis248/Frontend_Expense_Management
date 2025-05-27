@@ -362,19 +362,6 @@ const TransactionsPage = () => {
     setDeleteModal({ isOpen: false, transactionId: null, transactionInfo: null })
   }
 
-  const applyFilters = (transactionList) => {
-    return transactionList.filter((transaction) => {
-      if (filters.action !== "all" && transaction.action !== filters.action) return false
-      if (filters.category_id !== "all" && transaction.category.id !== Number.parseInt(filters.category_id)) return false
-      if (filters.money_source_id !== "all" && transaction.money_source.id !== Number.parseInt(filters.money_source_id)) return false
-      if (filters.date_from && new Date(transaction.transaction_date) < new Date(filters.date_from)) return false
-      if (filters.date_to && new Date(transaction.transaction_date) > new Date(filters.date_to)) return false
-      if (filters.min_amount && transaction.amount < Number.parseFloat(filters.min_amount)) return false
-      if (filters.max_amount && transaction.amount > Number.parseFloat(filters.max_amount)) return false
-      return true
-    })
-  }
-
 
   // Cancel delete
   const handleCancelDelete = () => {
@@ -872,6 +859,7 @@ const TransactionsPage = () => {
                 {(() => {
                   const state = getSelectAllState()
                   const selectedInCurrentPage = state.currentPageSelected
+                  // eslint-disable-next-line no-unused-vars
                   const currentPageTotal = state.currentPageTotal
                   
                   if (selectedTransactions.length > selectedInCurrentPage) {

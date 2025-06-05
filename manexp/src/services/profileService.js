@@ -38,9 +38,9 @@ const profileService = {
     try {
       console.log("=== getUserProfile called ===");
       const userId = profileService.getUserIdFromToken();
-      console.log("Making API call to /user/profile/" + userId);
+      console.log("Making API call to /user/" + userId);
       
-      const response = await axiosInstance.get(`/user/profile/${userId}`);
+      const response = await axiosInstance.get(`/user/${userId}`);
       console.log("Profile API response:", response.data);
       return response.data;
     } catch (error) {
@@ -61,17 +61,36 @@ const profileService = {
       console.log("Profile data to update:", profileData);
       
       const userId = profileService.getUserIdFromToken();
-      console.log("Making API call to /user/edit/" + userId);
+      console.log("Making API call to /user/" + userId);
       
-      const response = await axiosInstance.put(`/user/edit/${userId}`, profileData);
-      console.log("Update profile API response:", response.data);
+      // Chuyển đổi field names để match với backend
+      const requestData = {
+        fullName: profileData.fullName,
+        email: profileData.email,
+        phoneNumber: profileData.phoneNumber
+      };
+      
+      console.log("Converted request data:", requestData);
+      
+      const response = await axiosInstance.put(`/user/${userId}`, requestData);
+      console.log("Update profile API response:", response);
+      console.log("Response data:", response.data);
+      console.log("Response status:", response.status);
+      
+      // Backend trả về string "Update user success", không phải object
+      // Chỉ cần kiểm tra status 200 là thành công
+      if (response.status === 200) {
+        return { success: true, message: response.data };
+      }
+      
       return response.data;
     } catch (error) {
       console.error("Error updating user profile:", error);
       console.error("Error details:", {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        config: error.config
       });
       throw error;
     }
@@ -91,13 +110,23 @@ const profileService = {
       const userId = profileService.getUserIdFromToken();
       console.log("Making API call to /user/change-password/" + userId);
       
+      // Chuyển đổi field names để match với backend
+      const requestData = {
+        oldPassword: changePasswordData.old_password,
+        newPassword: changePasswordData.new_password,
+        confirmPassword: changePasswordData.confirm_password
+      };
+      
+      console.log("Converted request data:", {
+        ...requestData,
+        oldPassword: "***",
+        newPassword: "***", 
+        confirmPassword: "***"
+      });
+      
       const response = await axiosInstance.put(
         `/user/change-password/${userId}`,
-        {
-          oldPassword: changePasswordData.old_password,
-          newPassword: changePasswordData.new_password,
-          confirmPassword: changePasswordData.confirm_password
-        }
+        requestData
       );
       console.log("Change password API response:", response.data);
       return response.data;

@@ -1,78 +1,62 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import Button from "../../common/Button" // Adjust path as needed
-import InputField from "../../common/InputField" // Adjust path as needed
-import Toast from "../../common/Toast" // Adjust path as needed
+import { useDispatch, useSelector } from "react-redux"
+import Button from "../../common/Button"
+import InputField from "../../common/InputField"
+import Toast from "../../common/Toast"
+import ConfirmModal from "../../common/ConfirmModal"
+import {
+  fetchMoneySources,
+  createMoneySource,
+  updateMoneySource,
+  deleteMoneySource,
+  toggleMoneySourceStatus,
+  hideToast,
+  showToast, // Add this line
+  // eslint-disable-next-line no-unused-vars
+  clearError,
+  selectMoneySources,
+  selectWalletLoading,
+  selectOperationLoading,
+  selectToast
+} from "../../../redux/wallet/walletSlice"
 import "../../../assets/WalletPage.css"
 
 const WalletPage = () => {
-  const [moneySources, setMoneySources] = useState([])
-  const [loading, setLoading] = useState(true)
+  // Redux state
+  const dispatch = useDispatch()
+  const moneySources = useSelector(selectMoneySources)
+  const loading = useSelector(selectWalletLoading)
+  const operationLoading = useSelector(selectOperationLoading)
+  const toast = useSelector(selectToast)
+
+  // Local state
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
-    type: "cash",
-    current_balance: "",
-    bank_name: "",
-    wallet_provider: "",
+    type: "CASH",
+    currentBalance: "",
+    bankName: "",
+    walletProvider: "",
     isActive: true,
   })
   const [editingId, setEditingId] = useState(null)
-  const [toast, setToast] = useState(null)
+  
+  // Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    sourceId: null,
+    sourceName: "",
+    transactionCount: 0
+  })
 
   // Ref để scroll lên đầu trang
   const pageTopRef = useRef(null)
 
   useEffect(() => {
-    // Simulate fetching data
-    // In a real app, you would call your API here
-    const fetchData = () => {
-      // Mock data
-      const mockMoneySources = [
-        {
-          id: 1,
-          name: "Ví tiền mặt",
-          type: "cash",
-          current_balance: 2000000,
-          bank_name: "",
-          wallet_provider: "",
-          isActive: true,
-          transaction_count: 12,
-        },
-        {
-          id: 2,
-          name: "Tài khoản ngân hàng",
-          type: "bank",
-          current_balance: 15000000,
-          bank_name: "Vietcombank",
-          wallet_provider: "",
-          isActive: true,
-          transaction_count: 8,
-        },
-        {
-          id: 3,
-          name: "Ví điện tử",
-          type: "e-wallet",
-          current_balance: 500000,
-          bank_name: "",
-          wallet_provider: "MoMo",
-          isActive: true,
-          transaction_count: 5,
-        },
-      ]
-
-      setMoneySources(mockMoneySources)
-      setLoading(false)
-    }
-
-    fetchData()
-  }, [])
-
-  // Show toast message
-  const showToast = (message, type) => {
-    setToast({ message, type })
-  }
+    dispatch(fetchMoneySources())
+  }, [dispatch])
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -89,79 +73,55 @@ const WalletPage = () => {
   }
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     // Validation
     if (!formData.name.trim()) {
-      showToast("Vui lòng nhập tên nguồn tiền", "error")
+      dispatch(showToast({ message: "Vui lòng nhập tên nguồn tiền", type: "error" }))
       return
     }
     
-    if (!formData.current_balance || Number.parseFloat(formData.current_balance) < 0) {
-      showToast("Vui lòng nhập số dư hợp lệ", "error")
+    if (!formData.currentBalance || Number.parseFloat(formData.currentBalance) < 0) {
+      dispatch(showToast({ message: "Vui lòng nhập số dư hợp lệ", type: "error" }))
       return
     }
 
-    if (formData.type === "bank" && !formData.bank_name.trim()) {
-      showToast("Vui lòng nhập tên ngân hàng", "error")
+    if (formData.type === "BANK" && !formData.bankName.trim()) {
+      dispatch(showToast({ message: "Vui lòng nhập tên ngân hàng", type: "error" }))
       return
     }
 
-    if (formData.type === "e-wallet" && !formData.wallet_provider.trim()) {
-      showToast("Vui lòng nhập nhà cung cấp ví điện tử", "error")
+    if (formData.type === "EWALLET" && !formData.walletProvider.trim()) {
+      dispatch(showToast({ message: "Vui lòng nhập nhà cung cấp ví điện tử", type: "error" }))
       return
     }
 
-    if (editingId) {
-      // Update existing money source
-      const updatedSources = moneySources.map((source) => {
-        if (source.id === editingId) {
-          return {
-            ...source,
-            name: formData.name,
-            type: formData.type,
-            current_balance: Number.parseFloat(formData.current_balance),
-            bank_name: formData.bank_name,
-            wallet_provider: formData.wallet_provider,
-            isActive: formData.isActive,
-          }
-        }
-        return source
-      })
+    const submitData = {
+      name: formData.name,
+      type: formData.type,
+      currentBalance: Number.parseFloat(formData.currentBalance),
+      bankName: formData.bankName,
+      walletProvider: formData.walletProvider,
+      isActive: formData.isActive,
+    }
 
-      setMoneySources(updatedSources)
-      setEditingId(null)
-      showToast("Cập nhật nguồn tiền thành công!", "success")
-    } else {
-      // Create new money source
-      const newSource = {
-        id: Date.now(), // Use timestamp for unique ID
-        name: formData.name,
-        type: formData.type,
-        current_balance: Number.parseFloat(formData.current_balance),
-        bank_name: formData.bank_name,
-        wallet_provider: formData.wallet_provider,
-        isActive: formData.isActive,
-        transaction_count: 0,
+    try {
+      if (editingId) {
+        // Update existing money source
+        await dispatch(updateMoneySource({ id: editingId, moneySourceData: submitData })).unwrap()
+        setEditingId(null)
+      } else {
+        // Create new money source
+        await dispatch(createMoneySource(submitData)).unwrap()
       }
 
-      setMoneySources([...moneySources, newSource])
-      showToast("Thêm nguồn tiền thành công!", "success")
+      // Reset form
+      resetForm()
+    } catch (error) {
+      // Error is handled by the slice
+      console.error("Error saving money source:", error)
     }
-
-    // Reset form
-    setFormData({
-      name: "",
-      type: "cash",
-      current_balance: "",
-      bank_name: "",
-      wallet_provider: "",
-      isActive: true,
-    })
-
-    // Hide form
-    setShowForm(false)
   }
 
   // Handle edit money source
@@ -169,9 +129,9 @@ const WalletPage = () => {
     setFormData({
       name: source.name,
       type: source.type,
-      current_balance: source.current_balance.toString(),
-      bank_name: source.bank_name,
-      wallet_provider: source.wallet_provider,
+      currentBalance: source.currentBalance.toString(),
+      bankName: source.bankName || "",
+      walletProvider: source.walletProvider || "",
       isActive: source.isActive,
     })
     setEditingId(source.id)
@@ -186,50 +146,72 @@ const WalletPage = () => {
     }, 0)
   }
 
-  // Handle delete money source
+  // Handle delete money source - show modal
   const handleDelete = (id) => {
-    // Check if money source has transactions
     const source = moneySources.find((src) => src.id === id)
-    if (source && source.transaction_count > 0) {
-      showToast(`Không thể xóa nguồn tiền này vì có ${source.transaction_count} giao dịch liên quan.`, "error")
-      return
+    if (source) {
+      setConfirmModal({
+        isOpen: true,
+        sourceId: id,
+        sourceName: source.name,
+        transactionCount: source.transaction_count || 0
+      })
     }
+  }
 
-    // Delete money source
-    const updatedSources = moneySources.filter((source) => source.id !== id)
-    setMoneySources(updatedSources)
-    showToast("Xóa nguồn tiền thành công!", "success")
+  // Confirm delete from modal
+  const confirmDelete = async () => {
+    try {
+      await dispatch(deleteMoneySource(confirmModal.sourceId)).unwrap()
+      closeModal()
+    } catch (error) {
+      // Error is handled by the slice
+      console.error("Error deleting money source:", error)
+      closeModal()
+    }
+  }
+
+  // Close modal
+  const closeModal = () => {
+    setConfirmModal({
+      isOpen: false,
+      sourceId: null,
+      sourceName: "",
+      transactionCount: 0
+    })
   }
 
   // Handle toggle active status
-  const handleToggleActive = (id) => {
-    const updatedSources = moneySources.map((source) => {
-      if (source.id === id) {
-        return {
-          ...source,
-          isActive: !source.isActive,
-        }
-      }
-      return source
-    })
-
-    setMoneySources(updatedSources)
-    const source = moneySources.find(s => s.id === id)
-    showToast(`${source.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'} nguồn tiền thành công!`, "success")
+  const handleToggleActive = async (id) => {
+    try {
+      const source = moneySources.find(s => s.id === id)
+      await dispatch(toggleMoneySourceStatus({ 
+        id, 
+        isActive: !source.isActive 
+      })).unwrap()
+    } catch (error) {
+      // Error is handled by the slice
+      console.error("Error toggling money source status:", error)
+    }
   }
 
   // Reset form
   const resetForm = () => {
     setFormData({
       name: "",
-      type: "cash",
-      current_balance: "",
-      bank_name: "",
-      wallet_provider: "",
+      type: "CASH",
+      currentBalance: "",
+      bankName: "",
+      walletProvider: "",
       isActive: true,
     })
     setShowForm(false)
     setEditingId(null)
+  }
+
+  // Handle toast close
+  const handleToastClose = () => {
+    dispatch(hideToast())
   }
 
   if (loading) {
@@ -243,9 +225,27 @@ const WalletPage = () => {
         <Toast
           message={toast.message}
           type={toast.type}
-          onClose={() => setToast(null)}
+          onClose={handleToastClose}
         />
       )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeModal}
+        onConfirm={confirmDelete}
+        title="Xác nhận xóa nguồn tiền"
+        message={`Bạn có chắc chắn muốn xóa nguồn tiền "${confirmModal.sourceName}"?`}
+        confirmText="Xóa"
+        cancelText="Hủy"
+        confirmButtonClass="btn-danger"
+        isLoading={operationLoading.delete}
+        warnings={
+          confirmModal.transactionCount > 0 
+            ? [`Nguồn tiền này có ${confirmModal.transactionCount} giao dịch liên quan. Việc xóa có thể ảnh hưởng đến dữ liệu lịch sử.`]
+            : []
+        }
+      />
 
       <div className="page-header">
         <h1 className="page-title">Quản lý nguồn tiền</h1>
@@ -255,10 +255,10 @@ const WalletPage = () => {
             setEditingId(null)
             setFormData({
               name: "",
-              type: "cash",
-              current_balance: "",
-              bank_name: "",
-              wallet_provider: "",
+              type: "CASH",
+              currentBalance: "",
+              bankName: "",
+              walletProvider: "",
               isActive: true,
             })
             setShowForm(!showForm)
@@ -295,10 +295,10 @@ const WalletPage = () => {
                   onChange={handleInputChange}
                   required
                 >
-                  <option value="cash">Tiền mặt</option>
-                  <option value="bank">Tài khoản ngân hàng</option>
-                  <option value="e-wallet">Ví điện tử</option>
-                  <option value="credit-card">Thẻ tín dụng</option>
+                  <option value="CASH">Tiền mặt</option>
+                  <option value="BANK">Tài khoản ngân hàng</option>
+                  <option value="EWALLET">Ví điện tử</option>
+                  <option value="CREDIT_CARD">Thẻ tín dụng</option>
                 </select>
               </div>
             </div>
@@ -308,33 +308,33 @@ const WalletPage = () => {
                 <InputField
                   label="Số dư hiện tại"
                   type="number"
-                  name="current_balance"
-                  value={formData.current_balance}
+                  name="currentBalance"
+                  value={formData.currentBalance}
                   onChange={handleInputChange}
                   placeholder="Nhập số dư hiện tại"
                 />
               </div>
 
-              {formData.type === "bank" && (
+              {formData.type === "BANK" && (
                 <div className="form-group">
                   <InputField
                     label="Tên ngân hàng"
                     type="text"
-                    name="bank_name"
-                    value={formData.bank_name}
+                    name="bankName"
+                    value={formData.bankName}
                     onChange={handleInputChange}
                     placeholder="Nhập tên ngân hàng"
                   />
                 </div>
               )}
 
-              {formData.type === "e-wallet" && (
+              {formData.type === "EWALLET" && (
                 <div className="form-group">
                   <InputField
                     label="Nhà cung cấp"
                     type="text"
-                    name="wallet_provider"
-                    value={formData.wallet_provider}
+                    name="walletProvider"
+                    value={formData.walletProvider}
                     onChange={handleInputChange}
                     placeholder="Nhập nhà cung cấp ví điện tử"
                   />
@@ -353,13 +353,25 @@ const WalletPage = () => {
             </div>
 
             <div className="form-actions">
-              <Button type="submit" className="btn btn-primary">
-                {editingId ? "Cập nhật" : "Lưu nguồn tiền"}
+              <Button 
+                type="submit" 
+                className="btn btn-primary"
+                disabled={operationLoading.create || operationLoading.update}
+              >
+                {(operationLoading.create || operationLoading.update) ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    {editingId ? " Đang cập nhật..." : " Đang lưu..."}
+                  </>
+                ) : (
+                  editingId ? "Cập nhật" : "Lưu nguồn tiền"
+                )}
               </Button>
               <Button
                 type="button"
                 className="btn btn-secondary"
                 onClick={resetForm}
+                disabled={operationLoading.create || operationLoading.update}
               >
                 Hủy
               </Button>
@@ -379,18 +391,18 @@ const WalletPage = () => {
               <div key={source.id} className={`source-card ${source.isActive ? "" : "inactive"}`}>
                 <div className="source-header">
                   <div className="source-icon">
-                    {source.type === "cash" && <i className="fas fa-money-bill-wave"></i>}
-                    {source.type === "bank" && <i className="fas fa-university"></i>}
-                    {source.type === "e-wallet" && <i className="fas fa-wallet"></i>}
-                    {source.type === "credit-card" && <i className="fas fa-credit-card"></i>}
+                    {(source.type || 'CASH') === "CASH" && <i className="fas fa-money-bill-wave"></i>}
+                    {(source.type || 'CASH') === "BANK" && <i className="fas fa-university"></i>}
+                    {(source.type || 'CASH') === "EWALLET" && <i className="fas fa-wallet"></i>}
+                    {(source.type || 'CASH') === "CREDIT_CARD" && <i className="fas fa-credit-card"></i>}
                   </div>
                   <div className="source-title">
                     <h3>{source.name}</h3>
-                    <span className={`source-badge ${source.type}`}>
-                      {source.type === "cash" && "Tiền mặt"}
-                      {source.type === "bank" && "Ngân hàng"}
-                      {source.type === "e-wallet" && "Ví điện tử"}
-                      {source.type === "credit-card" && "Thẻ tín dụng"}
+                    <span className={`source-badge ${(source.type || 'CASH').toLowerCase()}`}>
+                      {(source.type || 'CASH') === "CASH" && "Tiền mặt"}
+                      {(source.type || 'CASH') === "BANK" && "Ngân hàng"}
+                      {(source.type || 'CASH') === "EWALLET" && "Ví điện tử"}
+                      {(source.type || 'CASH') === "CREDIT_CARD" && "Thẻ tín dụng"}
                     </span>
                   </div>
                   <div className="source-actions">
@@ -398,13 +410,19 @@ const WalletPage = () => {
                       className={`btn-icon toggle ${source.isActive ? "active" : "inactive"}`}
                       onClick={() => handleToggleActive(source.id)}
                       title={source.isActive ? "Vô hiệu hóa" : "Kích hoạt"}
+                      disabled={operationLoading.toggle}
                     >
-                      <i className={`fas fa-${source.isActive ? "toggle-on" : "toggle-off"}`}></i>
+                      {operationLoading.toggle ? (
+                        <i className="fas fa-spinner fa-spin"></i>
+                      ) : (
+                        <i className={`fas fa-${source.isActive ? "toggle-on" : "toggle-off"}`}></i>
+                      )}
                     </Button>
                     <Button 
                       className="btn-icon edit" 
                       onClick={() => handleEdit(source)} 
                       title="Chỉnh sửa"
+                      disabled={operationLoading.update}
                     >
                       <i className="fas fa-edit"></i>
                     </Button>
@@ -412,6 +430,7 @@ const WalletPage = () => {
                       className="btn-icon delete" 
                       onClick={() => handleDelete(source.id)} 
                       title="Xóa"
+                      disabled={operationLoading.delete}
                     >
                       <i className="fas fa-trash"></i>
                     </Button>
@@ -421,27 +440,27 @@ const WalletPage = () => {
                 <div className="source-details">
                   <div className="source-balance">
                     <span className="label">Số dư hiện tại</span>
-                    <span className="value">{formatCurrency(source.current_balance)}</span>
+                    <span className="value">{formatCurrency(source.currentBalance)}</span>
                   </div>
 
-                  {source.bank_name && (
+                  {source.bankName && (
                     <div className="source-info">
                       <i className="fas fa-university"></i>
-                      <span>{source.bank_name}</span>
+                      <span>{source.bankName}</span>
                     </div>
                   )}
 
-                  {source.wallet_provider && (
+                  {source.walletProvider && (
                     <div className="source-info">
                       <i className="fas fa-store"></i>
-                      <span>{source.wallet_provider}</span>
+                      <span>{source.walletProvider}</span>
                     </div>
                   )}
 
                   <div className="source-stats">
                     <div className="source-transactions">
                       <i className="fas fa-exchange-alt"></i>
-                      <span>{source.transaction_count} giao dịch</span>
+                      <span>{source.transaction_count || 0} giao dịch</span>
                     </div>
                   </div>
                 </div>

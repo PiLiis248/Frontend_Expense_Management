@@ -428,6 +428,7 @@ input, .edit-select {
 .pagination-btn:hover:not(.disabled):not(.ellipsis) {
   background: #f5f5f5;
   border-color: #999;
+  color: black;
 }
 
 .pagination-btn.active {

@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-// import authService from "../services/authService";
 import tokenMethod from "../api/token";
 import PATHS from "../constants/path";
 import { 
@@ -106,7 +105,46 @@ export const AuthProvider = ({ children }) => {
       const result = await dispatch(registerUser(payload)).unwrap();
       return result;
     } catch (error) {
-      // Error handling is done in the slice
+      throw error;
+    }
+  };
+
+  // ✅ CẬP NHẬT USER INFO - Method mới
+  const updateUser = (updatedUserData) => {
+    try {
+      // 1. Lấy token data hiện tại
+      const currentTokenData = tokenMethod.get();
+      
+      if (currentTokenData && currentTokenData.user) {
+        // 2. Merge user data mới với data cũ
+        const updatedUser = {
+          ...currentTokenData.user,
+          ...updatedUserData
+        };
+
+        // 3. Tạo token data mới
+        const newTokenData = {
+          ...currentTokenData,
+          user: updatedUser
+        };
+
+        // 4. Lưu vào storage (giữ nguyên remember preference)
+        const hasLocalToken = localStorage.getItem("authData");
+        tokenMethod.set(newTokenData, !!hasLocalToken);
+
+        // 5. Cập nhật Redux store
+        dispatch(setUser({
+          user: updatedUser,
+          isAuthenticated: true
+        }));
+
+        console.log("User info updated successfully:", updatedUser);
+        return updatedUser;
+      } else {
+        throw new Error("No valid token found");
+      }
+    } catch (error) {
+      console.error("Failed to update user info:", error);
       throw error;
     }
   };
@@ -118,6 +156,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     register,
+    updateUser, // ← Method mới
   };
 
   return (

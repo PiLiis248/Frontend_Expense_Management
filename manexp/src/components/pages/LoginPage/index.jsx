@@ -9,10 +9,11 @@ import Toast from "../../common/Toast";
 import Modal from "../../common/Modal";
 import "../../../assets/AuthPage.css";
 import PATHS from "../../../constants/path";
-import { useAuthValidation } from "../../../hooks/useAuthValidation";
+import { useValidation } from "../../../hooks/useAuthValidation";
 import {
   loginUser,
   resetPassword,
+  resetFormData,
   loadRememberedCredentials,
   updateFormData,
   setShowForgotModal,
@@ -25,7 +26,7 @@ import {
 const LoginPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { validateLoginForm, validateEmail } = useAuthValidation();
+  const { validateLoginForm, validateEmail } = useValidation();
 
   // Get state from Redux store
   const {
@@ -43,6 +44,7 @@ const LoginPage = () => {
 
   // Load remembered credentials on component mount
   useEffect(() => {
+    dispatch(resetFormData());
     dispatch(loadRememberedCredentials());
   }, [dispatch]);
 
@@ -138,12 +140,13 @@ const LoginPage = () => {
         <form onSubmit={handleSubmit}>
           <InputField
             label="Số điện thoại"
-            type="text"
+            type="tel"
             value={formData.phone}
             onChange={handleChange}
             name="phone"
             placeholder="Nhập số điện thoại"
             error={formErrors.phone}
+            maxLength={10}
           />
 
           <InputField
@@ -228,7 +231,8 @@ const LoginPage = () => {
             ) : (
               <div className="reset-error">
                 <p className="error-message">
-                  Email không chính xác hoặc có lỗi trong quá trình xác nhận email
+                  Có lỗi xảy ra trong quá trình xác thực email. Vui lòng thử lại với email khác hoặc bấm
+                  <Link to={PATHS.register}> Đăng ký ngay</Link>
                 </p>
                 <Button
                   onClick={handleResendLink}

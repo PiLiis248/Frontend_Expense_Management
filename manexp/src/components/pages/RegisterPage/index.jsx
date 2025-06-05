@@ -166,12 +166,13 @@ const RegisterPage = () => {
 
           <InputField
             label="Số điện thoại"
-            type="text"
+            type="tel"
             value={formData.phone_number}
             onChange={handleChange}
             name="phone_number"
             placeholder="Nhập số điện thoại"
             error={errors.phone_number}
+            maxLength={10}
           />
 
           <InputField

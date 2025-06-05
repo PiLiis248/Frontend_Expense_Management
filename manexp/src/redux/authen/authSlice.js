@@ -244,6 +244,37 @@ const authSlice = createSlice({
       
       localStorage.removeItem("rememberedLogin");
     },
+    resetFormData: (state) => {
+      // Reset form data về trạng thái ban đầu
+      state.formData = {
+        phone: "",
+        password: "",
+        rememberMe: false,
+      };
+      
+      // Clear tất cả form errors
+      state.formErrors = {
+        phone: "",
+        password: "",
+        email: "",
+      };
+      
+      // Reset các state liên quan đến reset password
+      state.resetEmail = "";
+      state.resetError = null;
+      state.resetStatus = "";
+      state.resetCountdown = 0;
+      
+      // Ẩn toast nếu đang hiển thị
+      state.toast = {
+        visible: false,
+        message: "",
+        type: "",
+      };
+      
+      // Đảm bảo modal forgot password bị đóng
+      state.showForgotModal = false;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -334,6 +365,7 @@ export const {
   updateFormData,
   setFormErrors,
   clearFormErrors,
+  resetFormData,
   setShowForgotModal,
   setResetEmail,
   setResetStatus,

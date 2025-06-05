@@ -11,7 +11,8 @@ const InputField = ({
   checked,      // Trạng thái checked (dành cho checkbox)
   error,        // Thông báo lỗi nếu có
   placeholder,  // Gợi ý nhập liệu
-  className     // CSS tùy chỉnh
+  className ,
+  maxLength    // CSS tùy chỉnh
 }) => {
   const [showPassword, setShowPassword] = useState(false); // Trạng thái ẩn/hiện mật khẩu
 
@@ -46,6 +47,7 @@ const InputField = ({
                 type={inputType} // Kiểu input (password/text/number)
                 name={name}
                 value={value}
+                maxLength={maxLength}
                 onChange={onChange}
                 {...(register && register)}
                 className={`input ${

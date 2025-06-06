@@ -5,33 +5,21 @@ import { useDispatch, useSelector } from "react-redux"
 import Button from "../../common/Button"
 import InputField from "../../common/InputField"
 import Toast from "../../common/Toast"
-import ConfirmModal from "../../common/ConfirmModal"
 import {
   fetchMoneySources,
   createMoneySource,
   updateMoneySource,
   deleteMoneySource,
   toggleMoneySourceStatus,
-  hideToast,
-  showToast, // Add this line
-  // eslint-disable-next-line no-unused-vars
-  clearError,
-  selectMoneySources,
-  selectWalletLoading,
-  selectOperationLoading,
-  selectToast
+  clearToast,
+  setToast,
 } from "../../../redux/wallet/walletSlice"
 import "../../../assets/WalletPage.css"
 
 const WalletPage = () => {
-  // Redux state
   const dispatch = useDispatch()
-  const moneySources = useSelector(selectMoneySources)
-  const loading = useSelector(selectWalletLoading)
-  const operationLoading = useSelector(selectOperationLoading)
-  const toast = useSelector(selectToast)
+  const { moneySources, loading, submitting, toast } = useSelector((state) => state.wallet)
 
-  // Local state
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -42,14 +30,10 @@ const WalletPage = () => {
     isActive: true,
   })
   const [editingId, setEditingId] = useState(null)
-  
-  // Modal state
-  const [confirmModal, setConfirmModal] = useState({
-    isOpen: false,
-    sourceId: null,
-    sourceName: "",
-    transactionCount: 0
-  })
+
+  // Thêm state cho modal xác nhận xóa:
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletingSource, setDeletingSource] = useState(null)
 
   // Ref để scroll lên đầu trang
   const pageTopRef = useRef(null)
@@ -78,48 +62,50 @@ const WalletPage = () => {
 
     // Validation
     if (!formData.name.trim()) {
-      dispatch(showToast({ message: "Vui lòng nhập tên nguồn tiền", type: "error" }))
+      dispatch(setToast({ message: "Vui lòng nhập tên nguồn tiền", type: "error" }))
       return
     }
-    
+
     if (!formData.currentBalance || Number.parseFloat(formData.currentBalance) < 0) {
-      dispatch(showToast({ message: "Vui lòng nhập số dư hợp lệ", type: "error" }))
+      dispatch(setToast({ message: "Vui lòng nhập số dư hợp lệ", type: "error" }))
       return
     }
 
     if (formData.type === "BANK" && !formData.bankName.trim()) {
-      dispatch(showToast({ message: "Vui lòng nhập tên ngân hàng", type: "error" }))
+      dispatch(setToast({ message: "Vui lòng nhập tên ngân hàng", type: "error" }))
       return
     }
 
     if (formData.type === "EWALLET" && !formData.walletProvider.trim()) {
-      dispatch(showToast({ message: "Vui lòng nhập nhà cung cấp ví điện tử", type: "error" }))
+      dispatch(setToast({ message: "Vui lòng nhập nhà cung cấp ví điện tử", type: "error" }))
       return
     }
 
-    const submitData = {
+    const payload = {
       name: formData.name,
       type: formData.type,
       currentBalance: Number.parseFloat(formData.currentBalance),
-      bankName: formData.bankName,
-      walletProvider: formData.walletProvider,
+      bankName: formData.bankName || "",
+      walletProvider: formData.walletProvider || "",
       isActive: formData.isActive,
     }
 
     try {
       if (editingId) {
         // Update existing money source
-        await dispatch(updateMoneySource({ id: editingId, moneySourceData: submitData })).unwrap()
-        setEditingId(null)
+        await dispatch(updateMoneySource({ id: editingId, payload })).unwrap()
       } else {
         // Create new money source
-        await dispatch(createMoneySource(submitData)).unwrap()
+        await dispatch(createMoneySource(payload)).unwrap()
       }
 
-      // Reset form
+      // Fetch lại danh sách sau khi thành công
+      dispatch(fetchMoneySources())
+
+      // Reset form on success
       resetForm()
     } catch (error) {
-      // Error is handled by the slice
+      // Error is already handled in the slice
       console.error("Error saving money source:", error)
     }
   }
@@ -139,58 +125,68 @@ const WalletPage = () => {
 
     // Scroll lên đầu trang với animation mượt
     setTimeout(() => {
-      pageTopRef.current?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
+      pageTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
       })
     }, 0)
   }
 
-  // Handle delete money source - show modal
-  const handleDelete = (id) => {
-    const source = moneySources.find((src) => src.id === id)
-    if (source) {
-      setConfirmModal({
-        isOpen: true,
-        sourceId: id,
-        sourceName: source.name,
-        transactionCount: source.transaction_count || 0
-      })
+  // Handle delete money source
+  const handleDelete = (source) => {
+    // Check if money source has transactions (if this info is available)
+    if (source && source.transactionCount > 0) {
+      dispatch(
+        setToast({
+          message: `Không thể xóa nguồn tiền này vì có ${source.transactionCount} giao dịch liên quan.`,
+          type: "error",
+        }),
+      )
+      return
     }
+
+    setDeletingSource(source)
+    setShowDeleteModal(true)
   }
 
-  // Confirm delete from modal
   const confirmDelete = async () => {
+    if (!deletingSource) return
+
     try {
-      await dispatch(deleteMoneySource(confirmModal.sourceId)).unwrap()
-      closeModal()
+      await dispatch(deleteMoneySource(deletingSource.id)).unwrap()
+      // Fetch lại danh sách sau khi xóa thành công
+      dispatch(fetchMoneySources())
     } catch (error) {
-      // Error is handled by the slice
+      // Error is already handled in the slice
       console.error("Error deleting money source:", error)
-      closeModal()
+    } finally {
+      setShowDeleteModal(false)
+      setDeletingSource(null)
     }
   }
 
-  // Close modal
-  const closeModal = () => {
-    setConfirmModal({
-      isOpen: false,
-      sourceId: null,
-      sourceName: "",
-      transactionCount: 0
-    })
+  const cancelDelete = () => {
+    setShowDeleteModal(false)
+    setDeletingSource(null)
   }
 
   // Handle toggle active status
   const handleToggleActive = async (id) => {
+    const source = moneySources.find((s) => s.id === id)
+    if (!source) return
+
+    console.log("🔄 TOGGLE START - Source before toggle:", {
+      id: source.id,
+      name: source.name,
+      isActive: source.isActive,
+    })
+
     try {
-      const source = moneySources.find(s => s.id === id)
-      await dispatch(toggleMoneySourceStatus({ 
-        id, 
-        isActive: !source.isActive 
-      })).unwrap()
+      await dispatch(toggleMoneySourceStatus(id)).unwrap()
+      // Fetch lại danh sách sau khi toggle thành công
+      dispatch(fetchMoneySources())
     } catch (error) {
-      // Error is handled by the slice
+      // Error is already handled in the slice
       console.error("Error toggling money source status:", error)
     }
   }
@@ -209,9 +205,36 @@ const WalletPage = () => {
     setEditingId(null)
   }
 
-  // Handle toast close
-  const handleToastClose = () => {
-    dispatch(hideToast())
+  // Get display name for money source type
+  const getTypeDisplayName = (type) => {
+    switch (type) {
+      case "CASH":
+        return "Tiền mặt"
+      case "BANK":
+        return "Ngân hàng"
+      case "EWALLET":
+        return "Ví điện tử"
+      case "CREDIT_CARD":
+        return "Thẻ tín dụng"
+      default:
+        return type
+    }
+  }
+
+  // Get icon for money source type
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case "CASH":
+        return "fas fa-money-bill-wave"
+      case "BANK":
+        return "fas fa-university"
+      case "EWALLET":
+        return "fas fa-wallet"
+      case "CREDIT_CARD":
+        return "fas fa-credit-card"
+      default:
+        return "fas fa-money-bill-wave"
+    }
   }
 
   if (loading) {
@@ -221,31 +244,7 @@ const WalletPage = () => {
   return (
     <div className="money-sources-page" ref={pageTopRef}>
       {/* Toast notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={handleToastClose}
-        />
-      )}
-
-      {/* Confirm Modal */}
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onClose={closeModal}
-        onConfirm={confirmDelete}
-        title="Xác nhận xóa nguồn tiền"
-        message={`Bạn có chắc chắn muốn xóa nguồn tiền "${confirmModal.sourceName}"?`}
-        confirmText="Xóa"
-        cancelText="Hủy"
-        confirmButtonClass="btn-danger"
-        isLoading={operationLoading.delete}
-        warnings={
-          confirmModal.transactionCount > 0 
-            ? [`Nguồn tiền này có ${confirmModal.transactionCount} giao dịch liên quan. Việc xóa có thể ảnh hưởng đến dữ liệu lịch sử.`]
-            : []
-        }
-      />
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => dispatch(clearToast())} />}
 
       <div className="page-header">
         <h1 className="page-title">Quản lý nguồn tiền</h1>
@@ -282,6 +281,7 @@ const WalletPage = () => {
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Nhập tên nguồn tiền"
+                  required
                 />
               </div>
 
@@ -312,6 +312,9 @@ const WalletPage = () => {
                   value={formData.currentBalance}
                   onChange={handleInputChange}
                   placeholder="Nhập số dư hiện tại"
+                  min="0"
+                  step="0.01"
+                  required
                 />
               </div>
 
@@ -324,6 +327,7 @@ const WalletPage = () => {
                     value={formData.bankName}
                     onChange={handleInputChange}
                     placeholder="Nhập tên ngân hàng"
+                    required
                   />
                 </div>
               )}
@@ -337,6 +341,7 @@ const WalletPage = () => {
                     value={formData.walletProvider}
                     onChange={handleInputChange}
                     placeholder="Nhập nhà cung cấp ví điện tử"
+                    required
                   />
                 </div>
               )}
@@ -353,26 +358,10 @@ const WalletPage = () => {
             </div>
 
             <div className="form-actions">
-              <Button 
-                type="submit" 
-                className="btn btn-primary"
-                disabled={operationLoading.create || operationLoading.update}
-              >
-                {(operationLoading.create || operationLoading.update) ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin"></i>
-                    {editingId ? " Đang cập nhật..." : " Đang lưu..."}
-                  </>
-                ) : (
-                  editingId ? "Cập nhật" : "Lưu nguồn tiền"
-                )}
+              <Button type="submit" className="btn btn-primary" disabled={submitting}>
+                {submitting ? "Đang lưu..." : editingId ? "Cập nhật" : "Lưu nguồn tiền"}
               </Button>
-              <Button
-                type="button"
-                className="btn btn-secondary"
-                onClick={resetForm}
-                disabled={operationLoading.create || operationLoading.update}
-              >
+              <Button type="button" className="btn btn-secondary" onClick={resetForm} disabled={submitting}>
                 Hủy
               </Button>
             </div>
@@ -391,18 +380,12 @@ const WalletPage = () => {
               <div key={source.id} className={`source-card ${source.isActive ? "" : "inactive"}`}>
                 <div className="source-header">
                   <div className="source-icon">
-                    {(source.type || 'CASH') === "CASH" && <i className="fas fa-money-bill-wave"></i>}
-                    {(source.type || 'CASH') === "BANK" && <i className="fas fa-university"></i>}
-                    {(source.type || 'CASH') === "EWALLET" && <i className="fas fa-wallet"></i>}
-                    {(source.type || 'CASH') === "CREDIT_CARD" && <i className="fas fa-credit-card"></i>}
+                    <i className={getTypeIcon(source.type)}></i>
                   </div>
                   <div className="source-title">
                     <h3>{source.name}</h3>
-                    <span className={`source-badge ${(source.type || 'CASH').toLowerCase()}`}>
-                      {(source.type || 'CASH') === "CASH" && "Tiền mặt"}
-                      {(source.type || 'CASH') === "BANK" && "Ngân hàng"}
-                      {(source.type || 'CASH') === "EWALLET" && "Ví điện tử"}
-                      {(source.type || 'CASH') === "CREDIT_CARD" && "Thẻ tín dụng"}
+                    <span className={`source-badge ${source.type.toLowerCase()}`}>
+                      {getTypeDisplayName(source.type)}
                     </span>
                   </div>
                   <div className="source-actions">
@@ -410,28 +393,14 @@ const WalletPage = () => {
                       className={`btn-icon toggle ${source.isActive ? "active" : "inactive"}`}
                       onClick={() => handleToggleActive(source.id)}
                       title={source.isActive ? "Vô hiệu hóa" : "Kích hoạt"}
-                      disabled={operationLoading.toggle}
+                      disabled={submitting}
                     >
-                      {operationLoading.toggle ? (
-                        <i className="fas fa-spinner fa-spin"></i>
-                      ) : (
-                        <i className={`fas fa-${source.isActive ? "toggle-on" : "toggle-off"}`}></i>
-                      )}
+                      <i className={`fas fa-${source.isActive ? "toggle-on" : "toggle-off"}`}></i>
                     </Button>
-                    <Button 
-                      className="btn-icon edit" 
-                      onClick={() => handleEdit(source)} 
-                      title="Chỉnh sửa"
-                      disabled={operationLoading.update}
-                    >
+                    <Button className="btn-icon edit" onClick={() => handleEdit(source)} title="Chỉnh sửa">
                       <i className="fas fa-edit"></i>
                     </Button>
-                    <Button 
-                      className="btn-icon delete" 
-                      onClick={() => handleDelete(source.id)} 
-                      title="Xóa"
-                      disabled={operationLoading.delete}
-                    >
+                    <Button className="btn-icon delete" onClick={() => handleDelete(source)} title="Xóa">
                       <i className="fas fa-trash"></i>
                     </Button>
                   </div>
@@ -460,7 +429,7 @@ const WalletPage = () => {
                   <div className="source-stats">
                     <div className="source-transactions">
                       <i className="fas fa-exchange-alt"></i>
-                      <span>{source.transaction_count || 0} giao dịch</span>
+                      <span>{source.transactionCount || 0} giao dịch</span>
                     </div>
                   </div>
                 </div>
@@ -469,6 +438,30 @@ const WalletPage = () => {
           </div>
         )}
       </div>
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Xác nhận xóa</h3>
+            </div>
+            <div className="modal-body">
+              <p>
+                Bạn có chắc chắn muốn xóa nguồn tiền <strong>"{deletingSource?.name}"</strong>?
+              </p>
+              <p className="warning-text">Hành động này không thể hoàn tác.</p>
+            </div>
+            <div className="modal-actions">
+              <Button className="btn btn-danger" onClick={confirmDelete} disabled={submitting}>
+                {submitting ? "Đang xóa..." : "Xóa"}
+              </Button>
+              <Button className="btn btn-secondary" onClick={cancelDelete} disabled={submitting}>
+                Hủy
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

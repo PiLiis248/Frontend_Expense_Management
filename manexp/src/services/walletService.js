@@ -13,8 +13,8 @@ const getCurrentUserId = () => {
 };
 
 const walletService = {
-  // Get all money sources for current user
-  getAllMoneySources: async () => {
+  // ✅ Lấy tất cả money sources của user hiện tại
+  async getAllMoneySources() {
     try {
       const userId = getCurrentUserId();
       if (!userId) {
@@ -28,8 +28,8 @@ const walletService = {
     }
   },
 
-  // Get all money sources for a specific user (admin function)
-  getAllMoneySourcesByUserId: async (userId) => {
+  // ✅ Lấy tất cả money sources theo userId (admin function)
+  async getAllMoneySourcesByUserId(userId) {
     try {
       const response = await axiosInstance.get(`/money-sources/user/${userId}`);
       return response.data;
@@ -39,30 +39,23 @@ const walletService = {
     }
   },
 
-  // Get all money sources (admin function)
-  getAllMoneySourcesAdmin: async () => {
+  // ✅ Lấy tổng số dư hiện tại của user
+  async getCurrentBalance(userId = null) {
     try {
-      const response = await axiosInstance.get("/money-sources");
+      const targetUserId = userId || getCurrentUserId();
+      if (!targetUserId) {
+        throw new Error("User not authenticated");
+      }
+      const response = await axiosInstance.get(`/money-sources/current-balance/user/${targetUserId}`);
       return response.data;
     } catch (error) {
-      console.error("Error fetching all money sources:", error);
+      console.error("Error fetching current balance:", error);
       throw error;
     }
   },
 
-  // Get money source by ID
-  getMoneySourceById: async (id) => {
-    try {
-      const response = await axiosInstance.get(`/money-sources/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching money source ${id}:`, error);
-      throw error;
-    }
-  },
-
-  // Create new money source
-  createMoneySource: async (moneySourceData) => {
+  // ✅ Tạo money source mới
+  async createMoneySource(moneySourceData = {}) {
     try {
       const userId = getCurrentUserId();
       if (!userId) {
@@ -76,7 +69,7 @@ const walletService = {
         walletProvider: moneySourceData.walletProvider || "",
         type: moneySourceData.type, // CASH, BANK, EWALLET
         isActive: moneySourceData.isActive !== undefined ? moneySourceData.isActive : true,
-        userId: moneySourceData.userId || userId // Use provided userId or current user's ID
+        userId: moneySourceData.userId || userId
       };
 
       const response = await axiosInstance.post("/money-sources", payload);
@@ -87,8 +80,8 @@ const walletService = {
     }
   },
 
-  // Update money source
-  updateMoneySource: async (id, moneySourceData) => {
+  // ✅ Cập nhật money source
+  async updateMoneySource(id, moneySourceData = {}) {
     try {
       const payload = {
         name: moneySourceData.name,
@@ -96,7 +89,8 @@ const walletService = {
         bankName: moneySourceData.bankName || "",
         walletProvider: moneySourceData.walletProvider || "",
         type: moneySourceData.type,
-        isActive: moneySourceData.isActive !== undefined ? moneySourceData.isActive : true
+        isActive: moneySourceData.isActive !== undefined ? moneySourceData.isActive : true,
+        userId: moneySourceData.userId
       };
 
       const response = await axiosInstance.put(`/money-sources/${id}`, payload);
@@ -107,8 +101,8 @@ const walletService = {
     }
   },
 
-  // Delete money source
-  deleteMoneySource: async (id) => {
+  // ✅ Xóa money source
+  async deleteMoneySource(id) {
     try {
       const response = await axiosInstance.delete(`/money-sources/${id}`);
       return response.data;
@@ -116,33 +110,7 @@ const walletService = {
       console.error(`Error deleting money source ${id}:`, error);
       throw error;
     }
-  },
-
-  // Toggle money source active status
-  toggleMoneySourceStatus: async (id, isActive) => {
-    try {
-      const response = await axiosInstance.patch(`/money-sources/${id}/status`, {
-        isActive
-      });
-      return response.data;
-    } catch (error) {
-      console.error(`Error toggling money source ${id} status:`, error);
-      throw error;
-    }
-  },
-
-  // Update money source balance
-  updateBalance: async (id, newBalance) => {
-    try {
-      const response = await axiosInstance.patch(`/money-sources/${id}/balance`, {
-        currentBalance: newBalance
-      });
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating balance for money source ${id}:`, error);
-      throw error;
-    }
   }
 };
 
-export { walletService };
+export default walletService;

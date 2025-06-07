@@ -84,7 +84,7 @@ const WalletPage = () => {
     const payload = {
       name: formData.name,
       type: formData.type,
-      currentBalance: Number.parseFloat(formData.currentBalance),
+      currentBalance: parseInt(formData.currentBalance, 10),
       bankName: formData.bankName || "",
       walletProvider: formData.walletProvider || "",
       isActive: formData.isActive,

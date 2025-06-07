@@ -5,6 +5,9 @@ import Button from "../../common/Button" // Adjust path as needed
 import InputField from "../../common/InputField" // Adjust path as needed
 import Toast from "../../common/Toast" // Adjust path as needed
 import ConfirmModal from "../../common/ConfirmModal" // Add this import
+import spendingLimitService from "../../../services/spendingLimitService" // Import the service
+import categoryService from "../../../services/categoryService" // Import category service
+import moneySourceService from "../../../services/walletService" // Import money source service
 import "../../../assets/SpendingLimitsPage.css"
 
 const SpendingLimitsPage = () => {
@@ -14,11 +17,11 @@ const SpendingLimitsPage = () => {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
-    limit_amount: "",
-    period_type: "monthly",
-    start_date: new Date().toISOString().split("T")[0],
-    category_id: "",
-    money_source_id: "",
+    limitAmount: "",
+    periodType: "MONTHLY",
+    startDate: new Date().toISOString().split("T")[0],
+    categoryId: "",
+    moneySourceId: "",
     note: "",
     isActive: true,
   })
@@ -33,78 +36,32 @@ const SpendingLimitsPage = () => {
   const pageTopRef = useRef(null)
 
   useEffect(() => {
-    // Simulate fetching data
-    // In a real app, you would call your API here
-    const fetchData = () => {
-      // Mock data
-      const mockSpendingLimits = [
-        {
-          id: 1,
-          limit_amount: 3000000,
-          period_type: "monthly",
-          start_date: "2023-05-01",
-          actual_spent: 1800000,
-          note: "Giới hạn chi tiêu cho ăn uống hàng tháng",
-          isActive: true,
-          category: { id: 1, name: "Ăn uống" },
-          money_source: { id: 1, name: "Ví tiền mặt" },
-        },
-        {
-          id: 2,
-          limit_amount: 2000000,
-          period_type: "monthly",
-          start_date: "2023-05-01",
-          actual_spent: 1500000,
-          note: "Giới hạn chi tiêu cho mua sắm hàng tháng",
-          isActive: true,
-          category: { id: 2, name: "Mua sắm" },
-          money_source: { id: 2, name: "Tài khoản ngân hàng" },
-        },
-        {
-          id: 3,
-          limit_amount: 1000000,
-          period_type: "monthly",
-          start_date: "2023-05-01",
-          actual_spent: 300000,
-          note: "Giới hạn chi tiêu cho giải trí hàng tháng",
-          isActive: true,
-          category: { id: 6, name: "Giải trí" },
-          money_source: { id: 1, name: "Ví tiền mặt" },
-        },
-        {
-          id: 4,
-          limit_amount: 500000,
-          period_type: "weekly",
-          start_date: "2023-05-01",
-          actual_spent: 350000,
-          note: "Giới hạn chi tiêu cho cafe hàng tuần",
-          isActive: true,
-          category: { id: 7, name: "Cafe" },
-          money_source: { id: 1, name: "Ví tiền mặt" },
-        },
-      ]
-
-      const mockCategories = [
-        { id: 1, name: "Ăn uống" },
-        { id: 2, name: "Mua sắm" },
-        { id: 3, name: "Hóa đơn" },
-        { id: 6, name: "Giải trí" },
-        { id: 7, name: "Cafe" },
-      ]
-
-      const mockMoneySources = [
-        { id: 1, name: "Ví tiền mặt", type: "cash", current_balance: 2000000 },
-        { id: 2, name: "Tài khoản ngân hàng", type: "bank", current_balance: 15000000 },
-      ]
-
-      setSpendingLimits(mockSpendingLimits)
-      setCategories(mockCategories)
-      setMoneySources(mockMoneySources)
-      setLoading(false)
-    }
-
     fetchData()
   }, [])
+
+  // Fetch data from APIs
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      
+      // Fetch all data in parallel
+      const [limitsResponse, categoriesResponse, moneySourcesResponse] = await Promise.all([
+        spendingLimitService.getAllSpendingLimits(),
+        categoryService.getAllCategories(),
+        moneySourceService.getAllMoneySources()
+      ])
+
+      setSpendingLimits(limitsResponse || [])
+      setCategories(categoriesResponse || [])
+      setMoneySources(moneySourcesResponse || [])
+      
+    } catch (error) {
+      console.error("Error fetching data:", error)
+      showToast("Lỗi khi tải dữ liệu", "error")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -117,8 +74,9 @@ const SpendingLimitsPage = () => {
     return new Intl.DateTimeFormat("vi-VN").format(date)
   }
 
-  // Calculate percentage
+  // Calculate percentage - FIXED: Allow over 100%
   const calculatePercentage = (actual, limit) => {
+    if (limit === 0) return 0
     return Math.round((actual / limit) * 100)
   }
 
@@ -137,79 +95,76 @@ const SpendingLimitsPage = () => {
   }
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     // Validation
-    if (!formData.category_id || !formData.money_source_id || !formData.limit_amount) {
+    if (!formData.categoryId || !formData.moneySourceId || !formData.limitAmount) {
       showToast("Vui lòng điền đầy đủ thông tin bắt buộc", "error")
       return
     }
 
-    if (editingId) {
-      // Update existing spending limit
-      const updatedLimits = spendingLimits.map((limit) => {
-        if (limit.id === editingId) {
-          return {
-            ...limit,
-            limit_amount: Number.parseFloat(formData.limit_amount),
-            period_type: formData.period_type,
-            start_date: formData.start_date,
-            note: formData.note,
-            isActive: formData.isActive,
-            category: categories.find((cat) => cat.id === Number.parseInt(formData.category_id)),
-            money_source: moneySources.find((source) => source.id === Number.parseInt(formData.money_source_id)),
-          }
-        }
-        return limit
-      })
-
-      setSpendingLimits(updatedLimits)
-      setEditingId(null)
-      showToast("Cập nhật mức chi tiêu thành công", "success")
-    } else {
-      // Create new spending limit
-      const newLimit = {
-        id: spendingLimits.length + 1,
-        limit_amount: Number.parseFloat(formData.limit_amount),
-        period_type: formData.period_type,
-        start_date: formData.start_date,
-        actual_spent: 0,
+    try {
+      const requestData = {
+        limitAmount: parseFloat(formData.limitAmount),
+        periodType: formData.periodType,
+        startDate: formData.startDate,
+        categoryId: parseInt(formData.categoryId),
+        moneySourceId: parseInt(formData.moneySourceId),
         note: formData.note,
-        isActive: formData.isActive,
-        category: categories.find((cat) => cat.id === Number.parseInt(formData.category_id)),
-        money_source: moneySources.find((source) => source.id === Number.parseInt(formData.money_source_id)),
+        isActive: formData.isActive
       }
 
-      setSpendingLimits([...spendingLimits, newLimit])
-      showToast("Thêm mức chi tiêu thành công", "success")
-    }
+      if (editingId) {
+        // Update existing spending limit
+        await spendingLimitService.updateSpendingLimit(editingId, requestData)
+        showToast("Cập nhật mức chi tiêu thành công", "success")
+      } else {
+        // Create new spending limit
+        await spendingLimitService.createSpendingLimit(requestData)
+        showToast("Thêm mức chi tiêu thành công", "success")
+      }
 
-    // Reset form
+      // Refresh data
+      await fetchData()
+
+      // Reset form
+      resetForm()
+      setShowForm(false)
+
+    } catch (error) {
+      console.error("Error saving spending limit:", error)
+      showToast(
+        editingId ? "Lỗi khi cập nhật mức chi tiêu" : "Lỗi khi thêm mức chi tiêu", 
+        "error"
+      )
+    }
+  }
+
+  // Reset form data
+  const resetForm = () => {
     setFormData({
-      limit_amount: "",
-      period_type: "monthly",
-      start_date: new Date().toISOString().split("T")[0],
-      category_id: "",
-      money_source_id: "",
+      limitAmount: "",
+      periodType: "MONTHLY",
+      startDate: new Date().toISOString().split("T")[0],
+      categoryId: "",
+      moneySourceId: "",
       note: "",
       isActive: true,
     })
-
-    // Hide form
-    setShowForm(false)
+    setEditingId(null)
   }
 
-  // Handle edit spending limit
+  // Handle edit spending limit - FIXED: Use correct property names
   const handleEdit = (limit) => {
     setFormData({
-      limit_amount: limit.limit_amount.toString(),
-      period_type: limit.period_type,
-      start_date: limit.start_date,
-      category_id: limit.category.id.toString(),
-      money_source_id: limit.money_source.id.toString(),
-      note: limit.note,
-      isActive: limit.isActive,
+      limitAmount: limit.limitAmount.toString(),
+      periodType: limit.periodType,
+      startDate: limit.startDate,
+      categoryId: limit.categoriesId.toString(), // FIXED: Use categoriesId
+      moneySourceId: limit.moneySourcesId.toString(), // FIXED: Use moneySourcesId
+      note: limit.note || "",
+      isActive: limit.active, // FIXED: Use active instead of isActive
     })
     setEditingId(limit.id)
     setShowForm(true)
@@ -223,18 +178,25 @@ const SpendingLimitsPage = () => {
     }, 0)
   }
 
-  // Handle delete spending limit - Updated to use ConfirmModal
+  // Handle delete spending limit
   const handleDelete = (limit) => {
     setItemToDelete(limit)
     setShowConfirmModal(true)
   }
 
   // Confirm delete action
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (itemToDelete) {
-      const updatedLimits = spendingLimits.filter((limit) => limit.id !== itemToDelete.id)
-      setSpendingLimits(updatedLimits)
-      showToast("Xóa mức chi tiêu thành công", "success")
+      try {
+        await spendingLimitService.deleteSpendingLimit(itemToDelete.id)
+        showToast("Xóa mức chi tiêu thành công", "success")
+        
+        // Refresh data
+        await fetchData()
+      } catch (error) {
+        console.error("Error deleting spending limit:", error)
+        showToast("Lỗi khi xóa mức chi tiêu", "error")
+      }
     }
     setShowConfirmModal(false)
     setItemToDelete(null)
@@ -246,39 +208,59 @@ const SpendingLimitsPage = () => {
     setItemToDelete(null)
   }
 
-  // Handle toggle active status
-  const handleToggleActive = (id) => {
-    const updatedLimits = spendingLimits.map((limit) => {
-      if (limit.id === id) {
-        return {
-          ...limit,
-          isActive: !limit.isActive,
-        }
+  // Handle toggle active status - FIXED: Use correct property name
+  const handleToggleActive = async (limit) => {
+    try {
+      const updatedData = {
+        limitAmount: limit.limitAmount,
+        periodType: limit.periodType,
+        startDate: limit.startDate,
+        note: limit.note,
+        active: !limit.active // FIXED: Use active instead of isActive
       }
-      return limit
-    })
-
-    setSpendingLimits(updatedLimits)
-    const limit = spendingLimits.find(l => l.id === id)
-    showToast(
-      `${limit.isActive ? "Vô hiệu hóa" : "Kích hoạt"} mức chi tiêu thành công`, 
-      "success"
-    )
+      
+      await spendingLimitService.updateSpendingLimit(limit.id, updatedData)
+      
+      showToast(
+        `${limit.active ? "Vô hiệu hóa" : "Kích hoạt"} mức chi tiêu thành công`, 
+        "success"
+      )
+      
+      // Refresh data
+      await fetchData()
+    } catch (error) {
+      console.error("Error toggling spending limit status:", error)
+      showToast("Lỗi khi thay đổi trạng thái mức chi tiêu", "error")
+    }
   }
 
   // Handle cancel form
   const handleCancelForm = () => {
     setShowForm(false)
-    setEditingId(null)
-    setFormData({
-      limit_amount: "",
-      period_type: "monthly",
-      start_date: new Date().toISOString().split("T")[0],
-      category_id: "",
-      money_source_id: "",
-      note: "",
-      isActive: true,
-    })
+    resetForm()
+  }
+
+  // Get category name by ID - FIXED: Use correct property name
+  const getCategoryName = (categoryId) => {
+    const category = categories.find(cat => cat.id === categoryId)
+    return category ? category.name : "N/A"
+  }
+
+  // Get money source name by ID - FIXED: Use correct property name
+  const getMoneySourceName = (moneySourceId) => {
+    const source = moneySources.find(src => src.id === moneySourceId)
+    return source ? source.name : "N/A"
+  }
+
+  // Convert period type to Vietnamese
+  const getPeriodTypeLabel = (periodType) => {
+    const periodMap = {
+      "DAILY": "Hàng ngày",
+      "WEEKLY": "Hàng tuần", 
+      "MONTHLY": "Hàng tháng",
+      "YEARLY": "Hàng năm"
+    }
+    return periodMap[periodType] || periodType
   }
 
   if (loading) {
@@ -301,7 +283,7 @@ const SpendingLimitsPage = () => {
         onClose={cancelDelete}
         onConfirm={confirmDelete}
         title="Xác nhận xóa mức chi tiêu"
-        message={itemToDelete ? `Bạn có chắc chắn muốn xóa mức chi tiêu cho danh mục "${itemToDelete.category.name}"?` : ""}
+        message={itemToDelete ? `Bạn có chắc chắn muốn xóa mức chi tiêu cho danh mục "${getCategoryName(itemToDelete.categoriesId)}"?` : ""}
         confirmText="Xóa"
         cancelText="Hủy"
         confirmButtonClass="btn-danger"
@@ -316,17 +298,12 @@ const SpendingLimitsPage = () => {
         <Button
           className="btn btn-primary"
           onClick={() => {
-            setEditingId(null)
-            setFormData({
-              limit_amount: "",
-              period_type: "monthly",
-              start_date: new Date().toISOString().split("T")[0],
-              category_id: "",
-              money_source_id: "",
-              note: "",
-              isActive: true,
-            })
-            setShowForm(!showForm)
+            if (showForm && !editingId) {
+              handleCancelForm()
+            } else {
+              resetForm()
+              setShowForm(true)
+            }
           }}
         >
           {showForm && !editingId ? "Hủy" : "Thêm mức chi tiêu mới"}
@@ -340,12 +317,12 @@ const SpendingLimitsPage = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="category_id">Danh mục</label>
+                <label htmlFor="categoryId">Danh mục</label>
                 <select
-                  id="category_id"
-                  name="category_id"
+                  id="categoryId"
+                  name="categoryId"
                   className="form-control"
-                  value={formData.category_id}
+                  value={formData.categoryId}
                   onChange={handleInputChange}
                   required
                 >
@@ -359,12 +336,12 @@ const SpendingLimitsPage = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="money_source_id">Nguồn tiền</label>
+                <label htmlFor="moneySourceId">Nguồn tiền</label>
                 <select
-                  id="money_source_id"
-                  name="money_source_id"
+                  id="moneySourceId"
+                  name="moneySourceId"
                   className="form-control"
-                  value={formData.money_source_id}
+                  value={formData.moneySourceId}
                   onChange={handleInputChange}
                   required
                 >
@@ -383,8 +360,8 @@ const SpendingLimitsPage = () => {
                 <InputField
                   label="Số tiền giới hạn"
                   type="number"
-                  name="limit_amount"
-                  value={formData.limit_amount}
+                  name="limitAmount"
+                  value={formData.limitAmount}
                   onChange={handleInputChange}
                   placeholder="Nhập số tiền giới hạn"
                   className="form-control"
@@ -392,19 +369,19 @@ const SpendingLimitsPage = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="period_type">Chu kỳ</label>
+                <label htmlFor="periodType">Chu kỳ</label>
                 <select
-                  id="period_type"
-                  name="period_type"
+                  id="periodType"
+                  name="periodType"
                   className="form-control"
-                  value={formData.period_type}
+                  value={formData.periodType}
                   onChange={handleInputChange}
                   required
                 >
-                  <option value="daily">Hàng ngày</option>
-                  <option value="weekly">Hàng tuần</option>
-                  <option value="monthly">Hàng tháng</option>
-                  <option value="yearly">Hàng năm</option>
+                  <option value="DAILY">Hàng ngày</option>
+                  <option value="WEEKLY">Hàng tuần</option>
+                  <option value="MONTHLY">Hàng tháng</option>
+                  <option value="YEARLY">Hàng năm</option>
                 </select>
               </div>
             </div>
@@ -414,8 +391,8 @@ const SpendingLimitsPage = () => {
                 <InputField
                   label="Ngày bắt đầu"
                   type="date"
-                  name="start_date"
-                  value={formData.start_date}
+                  name="startDate"
+                  value={formData.startDate}
                   onChange={handleInputChange}
                   className="form-control"
                 />
@@ -471,34 +448,43 @@ const SpendingLimitsPage = () => {
         ) : (
           <div className="limits-grid">
             {spendingLimits.map((limit) => {
-              const percentage = calculatePercentage(limit.actual_spent, limit.limit_amount)
+              // Debug: Log data để kiểm tra
+              console.log('Limit data:', limit)
+              
+              const actualSpent = limit.actualSpent || 0
+              const limitAmount = limit.limitAmount || 0
+              const remaining = limitAmount - actualSpent
+              const percentage = calculatePercentage(actualSpent, limitAmount)
+              
+              // Debug: Log calculations
+              console.log(`actualSpent: ${actualSpent}, limitAmount: ${limitAmount}, percentage: ${percentage}`)
+              
+              // FIXED: Updated status calculation with 80% warning threshold
               let statusClass = "normal"
-
-              if (percentage >= 90) {
+              if (percentage >= 100) {
+                statusClass = "over-limit" // New class for over limit
+              } else if (percentage >= 80) { // FIXED: 80% warning threshold
                 statusClass = "danger"
-              } else if (percentage >= 70) {
+              } else if (percentage >= 60) {
                 statusClass = "warning"
               }
 
               return (
-                <div key={limit.id} className={`limit-card ${limit.isActive ? "" : "inactive"}`}>
+                <div key={limit.id} className={`limit-card ${limit.active ? "" : "inactive"}`}>
                   <div className="limit-header">
                     <div className="limit-title">
-                      <h3>{limit.category.name}</h3>
-                      <span className={`limit-badge ${limit.period_type}`}>
-                        {limit.period_type === "daily" && "Hàng ngày"}
-                        {limit.period_type === "weekly" && "Hàng tuần"}
-                        {limit.period_type === "monthly" && "Hàng tháng"}
-                        {limit.period_type === "yearly" && "Hàng năm"}
+                      <h3>{getCategoryName(limit.categoriesId)}</h3>
+                      <span className={`limit-badge ${limit.periodType.toLowerCase()}`}>
+                        {getPeriodTypeLabel(limit.periodType)}
                       </span>
                     </div>
                     <div className="limit-actions">
                       <Button
-                        className={`btn-icon toggle ${limit.isActive ? "active" : "inactive"}`}
-                        onClick={() => handleToggleActive(limit.id)}
-                        title={limit.isActive ? "Vô hiệu hóa" : "Kích hoạt"}
+                        className={`btn-icon toggle ${limit.active ? "active" : "inactive"}`}
+                        onClick={() => handleToggleActive(limit)}
+                        title={limit.active ? "Vô hiệu hóa" : "Kích hoạt"}
                       >
-                        <i className={`fas fa-${limit.isActive ? "toggle-on" : "toggle-off"}`}></i>
+                        <i className={`fas fa-${limit.active ? "toggle-on" : "toggle-off"}`}></i>
                       </Button>
                       <Button
                         className="btn-icon edit"
@@ -521,33 +507,57 @@ const SpendingLimitsPage = () => {
                     <div className="limit-info">
                       <div className="limit-amount">
                         <span className="label">Giới hạn:</span>
-                        <span className="value">{formatCurrency(limit.limit_amount)}</span>
+                        <span className="value">{formatCurrency(limitAmount)}</span>
                       </div>
                       <div className="limit-spent">
                         <span className="label">Đã chi:</span>
-                        <span className="value">{formatCurrency(limit.actual_spent)}</span>
+                        <span className="value">{formatCurrency(actualSpent)}</span>
                       </div>
                       <div className="limit-remaining">
                         <span className="label">Còn lại:</span>
-                        <span className="value">{formatCurrency(limit.limit_amount - limit.actual_spent)}</span>
+                        <span className={`value ${remaining < 0 ? 'negative' : ''}`}>
+                          {formatCurrency(remaining)}
+                        </span>
                       </div>
                     </div>
 
                     <div className="limit-progress">
                       <div className="progress-bar">
-                        <div className={`progress-fill ${statusClass}`} style={{ width: `${percentage}%` }}></div>
+                        {/* FIXED: Progress bar can show over 100% but visually capped */}
+                        <div 
+                          className={`progress-fill ${statusClass}`} 
+                          style={{ width: `${Math.min(percentage, 100)}%` }}
+                        ></div>
                       </div>
-                      <span className="percentage">{percentage}%</span>
+                      <span className={`percentage ${percentage >= 80 ? 'warning' : ''}`}>
+                        {percentage}%
+                      </span>
                     </div>
+
+                    {/* FIXED: Warning message for 80%+ usage */}
+                    {percentage >= 80 && percentage < 100 && (
+                      <div className="limit-warning">
+                        <i className="fas fa-exclamation-triangle"></i>
+                        <span>Cảnh báo: Đã sử dụng {percentage}% giới hạn!</span>
+                      </div>
+                    )}
+
+                    {/* FIXED: Over limit message */}
+                    {percentage >= 100 && (
+                      <div className="limit-over">
+                        <i className="fas fa-times-circle"></i>
+                        <span>Đã vượt quá giới hạn {percentage - 100}%!</span>
+                      </div>
+                    )}
 
                     <div className="limit-meta">
                       <div className="limit-source">
                         <i className="fas fa-wallet"></i>
-                        <span>{limit.money_source.name}</span>
+                        <span>{getMoneySourceName(limit.moneySourcesId)}</span>
                       </div>
                       <div className="limit-date">
                         <i className="fas fa-calendar-alt"></i>
-                        <span>Bắt đầu: {formatDate(limit.start_date)}</span>
+                        <span>Bắt đầu: {formatDate(limit.startDate)}</span>
                       </div>
                     </div>
 

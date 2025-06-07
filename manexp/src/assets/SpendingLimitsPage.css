@@ -247,3 +247,46 @@
     gap: 10px;
   }
 }
+
+/* Thêm vào SpendingLimitsPage.css */
+.progress-fill.over-limit {
+  background-color: #dc3545 !important;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255,255,255,.1) 10px,
+    rgba(255,255,255,.1) 20px
+  );
+}
+
+.percentage.warning {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.value.negative {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.limit-warning, .limit-over {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.limit-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.limit-over {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}

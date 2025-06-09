@@ -521,8 +521,8 @@ const CategoryPage = () => {
                           )}
                         </h4>
                         <div className="category-meta">
-                          <span className={`transaction-type ${category.transactionTypesId === 1 ? 'expense' : 'income'}`}>
-                            {category.transactionTypesId === 1 ? 'Chi tiêu' : 'Thu nhập'}
+                          <span className={`transaction-type ${category.transactionTypesId == 1 ? 'expense' : 'income'}`}>
+                            {category.transactionTypesId == 1 ? 'Chi tiêu' : 'Thu nhập'}
                           </span>
                           {category.parentId && (
                             <span className="parent-category">
@@ -620,8 +620,8 @@ const CategoryPage = () => {
                               )}
                             </h3>
                             <div className="category-meta">
-                              <span className={`transaction-type ${parentCategory.transactionTypesId === 1 ? 'expense' : 'income'}`}>
-                                {parentCategory.transactionTypesId === 1 ? 'Chi tiêu' : 'Thu nhập'}
+                              <span className={`transaction-type ${parentCategory.transactionTypesId == 1 ? 'expense' : 'income'}`}>
+                                {parentCategory.transactionTypesId == 1 ? 'Chi tiêu' : 'Thu nhập'}
                               </span>
                               {childCategories.length > 0 && (
                                 <span className="children-count">

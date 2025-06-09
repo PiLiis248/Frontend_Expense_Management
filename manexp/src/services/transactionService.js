@@ -2,11 +2,12 @@ import axiosInstance from "../api/axios";
 import tokenMethod from "../api/token";
 
 const transactionService = {
-  // GET /transactions - Lấy tất cả transactions
-  getAllTransactions: async () => {
+  // GET /transactions/user/{id} - Lấy tất cả transactions của user
+  getAllTransactions: async (userId = null) => {
     try {
       const user = tokenMethod.get();
-      const response = await axiosInstance.get(`/transactions/${user.user.id}`);
+      const targetUserId = userId || user.user.id;
+      const response = await axiosInstance.get(`/transactions/user/${targetUserId}`);
       return response.data;
     } catch (error) {
       console.error("Error getting all transactions:", error);
@@ -14,10 +15,12 @@ const transactionService = {
     }
   },
 
-  // GET /transactions/page - Lấy transactions với phân trang
-  getTransactionsWithPagination: async (params = {}) => {
+  // GET /transactions/page/user/{id} - Lấy transactions với phân trang
+  getTransactionsWithPagination: async (userId = null, params = {}) => {
     try {
-      const response = await axiosInstance.get("/transactions/page", {
+      const user = tokenMethod.get();
+      const targetUserId = userId || user.user.id;
+      const response = await axiosInstance.get(`/transactions/page/user/${targetUserId}`, {
         params: params // Có thể truyền page, size, sort
       });
       return response.data;
@@ -87,6 +90,49 @@ const transactionService = {
   // Xóa một transaction duy nhất (helper method)
   deleteTransaction: async (id) => {
     return transactionService.deleteTransactions([id]);
+  },
+
+  // GET /transactions/total-expense/user/{userID} - Lấy tổng chi tiêu
+  getTotalExpense: async (type, userId = null) => {
+    try {
+      const user = tokenMethod.get();
+      const targetUserId = userId || user.user.id;
+      const response = await axiosInstance.get(`/transactions/total-expense/user/${targetUserId}`, {
+        params: { type: type } // DAY, MONTH, YEAR
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error getting total expense:", error);
+      throw error;
+    }
+  },
+
+  // GET /transactions/total-income/user/{userID} - Lấy tổng thu nhập
+  getTotalIncome: async (type, userId = null) => {
+    try {
+      const user = tokenMethod.get();
+      const targetUserId = userId || user.user.id;
+      const response = await axiosInstance.get(`/transactions/total-income/user/${targetUserId}`, {
+        params: { type: type } // DAY, MONTH, YEAR
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error getting total income:", error);
+      throw error;
+    }
+  },
+
+  // GET /transactions/recent-transactions/user/{userId}/limit/{limit} - Lấy giao dịch gần đây
+  getRecentTransactions: async (userId = null, limit = 10) => {
+    try {
+      const user = tokenMethod.get();
+      const targetUserId = userId || user.user.id;
+      const response = await axiosInstance.get(`/transactions/recent-transactions/user/${targetUserId}/limit/${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error getting recent transactions:", error);
+      throw error;
+    }
   }
 };
 

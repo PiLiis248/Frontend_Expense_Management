@@ -215,8 +215,10 @@ const SpendingLimitsPage = () => {
         limitAmount: limit.limitAmount,
         periodType: limit.periodType,
         startDate: limit.startDate,
-        note: limit.note,
-        active: !limit.active // FIXED: Use active instead of isActive
+        categoryId: limit.categoriesId, 
+        moneySourceId: limit.moneySourcesId, 
+        note: limit.note || "",
+        isActive: !limit.active 
       }
       
       await spendingLimitService.updateSpendingLimit(limit.id, updatedData)
@@ -230,6 +232,15 @@ const SpendingLimitsPage = () => {
       await fetchData()
     } catch (error) {
       console.error("Error toggling spending limit status:", error)
+      console.error("Request data:", {
+        limitAmount: limit.limitAmount,
+        periodType: limit.periodType,
+        startDate: limit.startDate,
+        categoryId: limit.categoriesId,
+        moneySourceId: limit.moneySourcesId,
+        note: limit.note || "",
+        isActive: !limit.active
+      })
       showToast("Lỗi khi thay đổi trạng thái mức chi tiêu", "error")
     }
   }

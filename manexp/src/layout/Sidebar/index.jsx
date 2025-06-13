@@ -2,19 +2,23 @@
 import { NavLink } from "react-router-dom"
 import "../../assets/Sidebar.css"
 import PATHS from "../../constants/path"
-import { IoClose } from "react-icons/io5";
+import { IoClose } from "react-icons/io5"
+import { useWarning } from "../../constants/WarningContext"
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
+  const { warningCount } = useWarning()
+
   const handleCloseSidebar = () => {
     toggleSidebar()
   }
+
   return (
     <aside className={`sidebar ${isOpen ? "open" : ""}`}>
       <div className="sidebar-header">
         <h2>Expense Manager</h2>
         <button className="close-sidebar" onClick={handleCloseSidebar}>
-        <IoClose size={24} />
-      </button>
+          <IoClose size={24} />
+        </button>
       </div>
       <nav className="sidebar-nav">
         <ul>
@@ -40,6 +44,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             <NavLink to="/spending-limits" onClick={() => window.innerWidth < 768 && toggleSidebar()}>
               <i className="fas fa-chart-line"></i>
               <span>Mức chi tiêu</span>
+              {warningCount > 0 && <span className="notification-badge">{warningCount}</span>}
             </NavLink>
           </li>
           <li>

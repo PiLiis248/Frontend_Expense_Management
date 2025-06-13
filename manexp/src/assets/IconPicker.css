@@ -62,12 +62,12 @@
 .search-container {
   position: relative;
   flex: 1;
-  min-width: 200px;
+  /* min-width: 50px; */
 }
 
 .search-container i {
   position: absolute;
-  left: -2px;
+  left: 16px;
   top: 50%;
   transform: translateY(-50%);
   color: #777;

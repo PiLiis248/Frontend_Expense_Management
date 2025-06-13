@@ -39,7 +39,7 @@ const spendingLimitService = {
     }
   },
 
-  // ✅ Tạo spending limit mới - FIXED theo API
+  // ✅ Tạo spending limit mới - ĐÚNG theo backend Create API
   async createSpendingLimit(spendingLimitData = {}) {
     try {
       const userId = getCurrentUserId();
@@ -52,8 +52,8 @@ const spendingLimitService = {
         periodType: spendingLimitData.periodType, 
         startDate: spendingLimitData.startDate,
         note: spendingLimitData.note,
-        categoryId: spendingLimitData.categoryId,
-        moneySourceId: spendingLimitData.moneySourceId, 
+        categoryId: spendingLimitData.categoryId,    // ✅ ĐÚNG cho Create
+        moneySourceId: spendingLimitData.moneySourceId, // ✅ ĐÚNG cho Create
         userId: spendingLimitData.userId || userId
       };
 
@@ -65,21 +65,32 @@ const spendingLimitService = {
     }
   },
 
-  // ✅ Cập nhật spending limit - FIXED theo API (thêm isActive)
+  // 🔥 SỬA LỖI: Cập nhật spending limit - CHỈ GỬI CÁC FIELD BACKEND NHẬN
   async updateSpendingLimit(id, spendingLimitData = {}) {
     try {
+      // ❗ Backend Update chỉ nhận: limitAmount, periodType, startDate, note, isActive
+      // KHÔNG nhận categoryId, moneySourceId, userId
       const payload = {
         limitAmount: spendingLimitData.limitAmount,
         periodType: spendingLimitData.periodType, 
         startDate: spendingLimitData.startDate,
         note: spendingLimitData.note,
-        isActive: spendingLimitData.isActive // Đổi từ active thành isActive
+        isActive: spendingLimitData.isActive  // ✅ Backend dùng isActive
       };
+
+      console.log("Update payload:", payload); // Debug log
 
       const response = await axiosInstance.put(`/spending-limits/${id}`, payload);
       return response.data;
     } catch (error) {
       console.error("Error updating spending limit:", error);
+      console.error("Payload sent:", {
+        limitAmount: spendingLimitData.limitAmount,
+        periodType: spendingLimitData.periodType,
+        startDate: spendingLimitData.startDate,
+        note: spendingLimitData.note,
+        isActive: spendingLimitData.isActive
+      });
       throw error;
     }
   },
@@ -95,17 +106,18 @@ const spendingLimitService = {
     }
   },
 
-  // ✅ Toggle trạng thái active/inactive của spending limit - FIXED
+  // 🔥 SỬA LỖI: Toggle trạng thái - SỬA ĐỂ DÙNG ĐÚNG TÊN THUỘC TÍNH
   async toggleSpendingLimitStatus(id) {
     try {
       const currentLimit = await this.getSpendingLimitById(id);
       
+      // ❗ Chỉ gửi các field backend Update nhận
       const updatedData = {
         limitAmount: currentLimit.limitAmount,
         periodType: currentLimit.periodType,
         startDate: currentLimit.startDate,
         note: currentLimit.note,
-        isActive: !currentLimit.isActive // Đổi từ active thành isActive
+        isActive: !currentLimit.active  // ✅ Backend response dùng 'active', Update nhận 'isActive'
       };
 
       return await this.updateSpendingLimit(id, updatedData);
@@ -125,10 +137,11 @@ const spendingLimitService = {
 
       const spendingLimits = await this.getAllSpendingLimits();
       
+      // ✅ Backend response dùng 'categoriesId' và 'active'
       const relevantLimit = spendingLimits.find(limit => 
-        limit.categoryId === categoryId && 
+        limit.categoriesId === categoryId && 
         limit.periodType === periodType && 
-        limit.isActive // Đổi từ active thành isActive
+        limit.active  // ✅ Backend response dùng 'active'
       );
 
       if (!relevantLimit) {

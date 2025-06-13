@@ -247,7 +247,6 @@ const WalletPage = () => {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => dispatch(clearToast())} />}
 
       <div className="page-header">
-        <h1 className="page-title">Quản lý nguồn tiền</h1>
         <Button
           className="btn btn-primary"
           onClick={() => {

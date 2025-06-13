@@ -25,61 +25,154 @@ const CategoryPage = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [showIconPicker, setShowIconPicker] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState(new Set()) // Thêm state để quản lý dropdown
-  
+
+  // Thêm state để quản lý lỗi validation
+  const [formErrors, setFormErrors] = useState({
+    name: "",
+    icon: "",
+  })
+
   // Ref để scroll lên đầu trang
   const pageTopRef = useRef(null)
 
   // Icon mapping để hiển thị icon mặc định cho các danh mục
   const iconMapping = {
-    'dining': 'utensils',
-    'transport': 'car',
-    'shopping': 'shopping-cart',
-    'utilities': 'home',
-    'entertainment': 'gamepad',
-    'breakfast': 'coffee',
-    'lunch': 'hamburger',
-    'dinner': 'pizza-slice',
-    'coffee': 'mug-hot',
-    'grocery': 'shopping-basket',
-    'parking': 'parking',
-    'fuel': 'gas-pump',
-    'carwash': 'car-wash',
-    'repair': 'wrench',
-    'taxi': 'taxi',
-    'clothing': 'tshirt',
-    'shoes': 'shoe-prints',
-    'accessories': 'glasses',
-    'household': 'couch',
-    'electronics': 'tv',
-    'electricity': 'bolt',
-    'water': 'tint',
-    'internet': 'wifi',
-    'phone': 'phone',
-    'gas': 'fire',
-    'health': 'heartbeat',
-    'education': 'graduation-cap',
-    'beauty': 'spa',
-    'salary': 'wallet',
-    'income': 'coins',
-    'base_salary': 'money-bill',
-    'bonus': 'gift',
-    'overtime': 'clock',
-    'commission': 'percentage',
-    'allowance': 'hand-holding-usd',
-    'interest': 'chart-line',
-    'rental': 'key',
-    'investment': 'chart-pie',
-    'gift': 'gift',
-    'other': 'ellipsis-h',
-    'misc_income': 'plus-circle',
-    'pizza': 'pizza-slice',
-    'bus': 'bus'
-  }
+    // Categories
+    dining: "utensils",
+    transport: "car",
+    shopping: "shopping-cart",
+    utilities: "home",
+    entertainment: "gamepad",
+    money: "wallet",
+    health: "heartbeat",
+    work: "briefcase",
+    sports: "football-ball",
+    travel: "suitcase",
+    technology: "laptop",
+    
+    // Dining & Food
+    breakfast: "coffee",
+    lunch: "hamburger",
+    dinner: "pizza-slice",
+    coffee: "mug-hot",
+    grocery: "shopping-basket",
+    restaurant: "utensils",
+    fastfood: "hamburger",
+    snack: "cookie-bite",
+    drink: "glass-whiskey",
+    alcohol: "wine-glass",
+    dessert: "ice-cream",
+    
+    // Transport
+    parking: "parking",
+    fuel: "gas-pump",
+    carwash: "car-crash", // Using car-crash as alternative
+    repair: "tools",
+    taxi: "taxi",
+    bus: "bus",
+    train: "train",
+    flight: "plane",
+    bike: "bicycle",
+    walk: "walking",
+    
+    // Shopping
+    clothing: "tshirt",
+    shoes: "shoe-prints",
+    accessories: "glasses",
+    household: "couch",
+    electronics: "tv",
+    books: "book",
+    gifts: "gift",
+    pharmacy: "pills",
+    
+    // Utilities
+    electricity: "bolt",
+    water: "tint",
+    internet: "wifi",
+    phone: "phone",
+    gas: "fire",
+    rent: "home",
+    insurance: "shield-alt",
+    
+    // Health & Beauty
+    hospital: "hospital-alt",
+    doctor: "user-md",
+    medicine: "pills",
+    fitness: "dumbbell",
+    beauty: "spa", // Note: 'spa' might not be available in free version
+    dental: "tooth",
+    vision: "eye",
+    
+    // Work & Education
+    salary: "wallet",
+    education: "graduation-cap",
+    training: "chalkboard-teacher",
+    office: "building",
+    meeting: "users",
+    project: "project-diagram",
+    
+    // Income Types
+    income: "coins",
+    base_salary: "money-bill",
+    bonus: "gift",
+    overtime: "clock",
+    commission: "percentage",
+    allowance: "hand-holding-usd",
+    interest: "chart-line",
+    rental: "key",
+    investment: "chart-pie",
+    freelance: "laptop-code",
+    
+    // Entertainment
+    movie: "film",
+    music: "music",
+    gaming: "gamepad",
+    sport: "football-ball",
+    hobby: "palette",
+    
+    // Technology
+    software: "laptop-code",
+    hardware: "microchip",
+    subscription: "credit-card",
+    
+    // General
+    other: "ellipsis-h",
+    misc_income: "plus-circle",
+    misc_expense: "minus-circle",
+    emergency: "exclamation-triangle",
+    savings: "piggy-bank",
+    debt: "credit-card",
+    loan: "hand-holding-usd",
+    tax: "receipt",
+    fee: "tags",
+    tip: "hand-holding-heart", // Alternative for tipping
+    charity: "hand-holding-heart",
+    
+    // Time-based
+    daily: "calendar-day",
+    weekly: "calendar-week",
+    monthly: "calendar-alt",
+    yearly: "calendar",
+    
+    // Status
+    completed: "check-circle",
+    pending: "clock",
+    cancelled: "times-circle",
+    important: "star",
+    
+    // Financial
+    bank: "university", // FontAwesome free alternative for bank
+    cash: "money-bill",
+    card: "credit-card",
+    transfer: "exchange-alt",
+    budget: "calculator",
+    report: "chart-bar"
+  };
 
   // Function để lấy icon class
   const getIconClass = (iconName) => {
-    if (!iconName) return 'tag'
-    return iconMapping[iconName] || iconName || 'tag'
+    if (!iconName) return "tag"
+    return iconMapping[iconName] || iconName || "tag"
   }
 
   // Function để kiểm tra xem category có phải là default không (userId = null)
@@ -98,7 +191,7 @@ const CategoryPage = () => {
 
   // Function để toggle dropdown
   const toggleCategoryExpansion = (categoryId) => {
-    setExpandedCategories(prev => {
+    setExpandedCategories((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(categoryId)) {
         newSet.delete(categoryId)
@@ -111,7 +204,7 @@ const CategoryPage = () => {
 
   // Function để mở rộng tất cả
   const expandAll = () => {
-    const allParentIds = parentCategories.map(cat => cat.id)
+    const allParentIds = parentCategories.map((cat) => cat.id)
     setExpandedCategories(new Set(allParentIds))
   }
 
@@ -138,12 +231,23 @@ const CategoryPage = () => {
     fetchCategories()
   }, [])
 
-  // Tính tổng giao dịch của danh mục cha (bao gồm cả danh mục con)
+  // Tính tổng giao dịch của danh mục cha (bao gồm cả giao dịch của danh mục con)
   const getTotalTransactions = (parentId) => {
-    const parent = categories.find(cat => cat.id === parentId)
-    const parentTransactions = parent ? parent.transaction_count || 0 : 0
+    // Tìm danh mục cha
+    const parentCategory = categories.find(cat => cat.id === parentId)
     
-    return parentTransactions 
+    // Tính số giao dịch của danh mục cha
+    let totalTransactions = parentCategory?.transactions ? parentCategory.transactions.length : 0
+    
+    // Tìm tất cả danh mục con của danh mục cha này
+    const childCategories = categories.filter((cat) => cat.parentId === parentId)
+
+    // Cộng thêm số giao dịch của từng danh mục con
+    childCategories.forEach((child) => {
+      totalTransactions += child.transactions ? child.transactions.length : 0
+    })
+
+    return totalTransactions
   }
 
   // Show toast notification
@@ -151,27 +255,102 @@ const CategoryPage = () => {
     setToast({ message, type })
   }
 
-  // Handle form input changes
+  // Function để validate form
+  const validateForm = () => {
+    const errors = {
+      name: "",
+      icon: "",
+    }
+
+    // Validate tên danh mục
+    if (!formData.name || formData.name.trim() === "") {
+      errors.name = "Vui lòng nhập tên danh mục"
+    } else if (formData.name.trim().length < 2) {
+      errors.name = "Tên danh mục phải có ít nhất 2 ký tự"
+    } else if (formData.name.trim().length > 50) {
+      errors.name = "Tên danh mục không được vượt quá 50 ký tự"
+    }
+
+    // Validate icon
+    if (!formData.icon || formData.icon.trim() === "") {
+      errors.icon = "Vui lòng chọn hoặc nhập icon cho danh mục"
+    }
+
+    // Kiểm tra trùng tên danh mục (ngoại trừ khi đang edit)
+    const isDuplicateName = categories.some(
+      (cat) => cat.name.toLowerCase().trim() === formData.name.toLowerCase().trim() && cat.id !== editingId,
+    )
+
+    if (isDuplicateName) {
+      errors.name = "Tên danh mục đã tồn tại, vui lòng chọn tên khác"
+    }
+
+    setFormErrors(errors)
+
+    // Return true nếu không có lỗi
+    return !errors.name && !errors.icon
+  }
+
+  // Handle form input changes với validation real-time
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'parentId' ? (value ? parseInt(value) : null) : value,
+      [name]: name === "parentId" ? (value ? Number.parseInt(value) : null) : value,
     }))
+
+    // Clear error khi user bắt đầu nhập
+    if (formErrors[name]) {
+      setFormErrors((prev) => ({
+        ...prev,
+        [name]: "",
+      }))
+    }
   }
 
-  // Handle icon selection
+  // Handle icon selection với validation
   const handleIconSelect = (iconName) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      icon: iconName
+      icon: iconName,
     }))
     setShowIconPicker(false)
+
+    // Clear error khi user chọn icon
+    if (formErrors.icon) {
+      setFormErrors((prev) => ({
+        ...prev,
+        icon: "",
+      }))
+    }
   }
 
-  // Handle form submission
+  // Handle manual icon input change
+  const handleIconInputChange = (e) => {
+    const { value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      icon: value,
+    }))
+
+    // Clear error khi user nhập icon
+    if (formErrors.icon) {
+      setFormErrors((prev) => ({
+        ...prev,
+        icon: "",
+      }))
+    }
+  }
+
+  // Handle form submission với validation
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // Validate form trước khi submit
+    if (!validateForm()) {
+      showToast("Vui lòng kiểm tra lại thông tin đã nhập!", "error")
+      return
+    }
 
     try {
       if (editingId) {
@@ -195,15 +374,18 @@ const CategoryPage = () => {
         transactionTypesId: 1,
       })
 
+      // Reset errors
+      setFormErrors({
+        name: "",
+        icon: "",
+      })
+
       // Hide form
       setShowForm(false)
       setEditingId(null)
     } catch (error) {
       console.error("Error saving category:", error)
-      showToast(
-        editingId ? "Lỗi khi cập nhật danh mục!" : "Lỗi khi thêm danh mục!", 
-        "error"
-      )
+      showToast(editingId ? "Lỗi khi cập nhật danh mục!" : "Lỗi khi thêm danh mục!", "error")
     }
   }
 
@@ -217,12 +399,18 @@ const CategoryPage = () => {
     })
     setEditingId(category.id)
     setShowForm(true)
-    
+
+    // Reset errors khi edit
+    setFormErrors({
+      name: "",
+      icon: "",
+    })
+
     // Scroll lên đầu trang với animation mượt
     setTimeout(() => {
-      pageTopRef.current?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
+      pageTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
       })
     }, 0)
   }
@@ -259,7 +447,7 @@ const CategoryPage = () => {
       const items = []
       if (hasChildren) items.push(`${childCategories.length} danh mục con`)
       if (transactionCount > 0) items.push(`${transactionCount} giao dịch`)
-      confirmMessage += ` ${items.join(' và ')}, bạn có chắc muốn xóa danh mục?`
+      confirmMessage += ` ${items.join(" và ")}, bạn có chắc muốn xóa danh mục?`
     } else {
       confirmMessage = `Bạn có chắc muốn xóa danh mục "${category.name}"?`
     }
@@ -271,7 +459,7 @@ const CategoryPage = () => {
       message: confirmMessage,
       hasChildren,
       transactionCount,
-      warnings
+      warnings,
     })
   }
 
@@ -282,7 +470,7 @@ const CategoryPage = () => {
     try {
       await categoryService.deleteCategory(categoryId)
       showToast("Xóa danh mục thành công!", "success")
-      
+
       // Refresh categories list
       await fetchCategories()
     } catch (error) {
@@ -296,6 +484,22 @@ const CategoryPage = () => {
   // Hủy xóa
   const cancelDelete = () => {
     setDeleteConfirm(null)
+  }
+
+  // Reset form function
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      parentId: null,
+      icon: "",
+      transactionTypesId: 1,
+    })
+    setFormErrors({
+      name: "",
+      icon: "",
+    })
+    setShowForm(false)
+    setEditingId(null)
   }
 
   // Get parent categories (categories with no parent)
@@ -318,13 +522,7 @@ const CategoryPage = () => {
   return (
     <div className="categories-page" ref={pageTopRef}>
       {/* Toast notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Delete confirmation modal */}
       <ConfirmModal
@@ -359,6 +557,10 @@ const CategoryPage = () => {
               icon: "",
               transactionTypesId: 1,
             })
+            setFormErrors({
+              name: "",
+              icon: "",
+            })
             setShowForm(!showForm)
           }}
         >
@@ -375,13 +577,14 @@ const CategoryPage = () => {
             <div className="form-row">
               <div className="form-group">
                 <InputField
-                  label="Tên danh mục"
+                  label="Tên danh mục *"
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Nhập tên danh mục"
-                  required
+                  error={formErrors.name}
+                  maxLength={50}
                 />
               </div>
 
@@ -419,18 +622,18 @@ const CategoryPage = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="icon">Icon</label>
+                <label htmlFor="icon">Icon *</label>
                 <div className="icon-input-container">
-                  <div className={`icon-preview ${formData.icon ? 'has-icon' : 'empty'}`}>
+                  <div className={`icon-preview ${formData.icon ? "has-icon" : "empty"}`}>
                     <i className={`fas fa-${getIconClass(formData.icon)}`}></i>
                   </div>
                   <input
                     type="text"
                     id="icon"
                     name="icon"
-                    className="icon-input"
+                    className={`icon-input ${formErrors.icon ? "error" : ""}`}
                     value={formData.icon}
-                    onChange={handleInputChange}
+                    onChange={handleIconInputChange}
                     placeholder="Nhập tên icon (vd: utensils, car)"
                   />
                   <button
@@ -443,27 +646,13 @@ const CategoryPage = () => {
                     <span>Chọn</span>
                   </button>
                 </div>
-                <small className="form-text text-muted">
-                  Ví dụ: utensils, car, shopping-cart, home, heart, star
-                </small>
+                {formErrors.icon && <p className="error-message">{formErrors.icon}</p>}
+                <small className="form-text text-muted">Ví dụ: utensils, car, shopping-cart, home, heart, star</small>
               </div>
             </div>
 
             <div className="form-actions">
-              <Button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setShowForm(false)
-                  setEditingId(null)
-                  setFormData({
-                    name: "",
-                    parentId: null,
-                    icon: "",
-                    transactionTypesId: 1,
-                  })
-                }}
-              >
+              <Button type="button" className="btn btn-secondary" onClick={resetForm}>
                 Hủy
               </Button>
               <Button type="submit" className="btn btn-primary">
@@ -486,11 +675,7 @@ const CategoryPage = () => {
             className="search-input"
           />
           {searchTerm && (
-            <button
-              className="clear-search"
-              onClick={() => setSearchTerm("")}
-              type="button"
-            >
+            <button className="clear-search" onClick={() => setSearchTerm("")} type="button">
               <i className="fas fa-times"></i>
             </button>
           )}
@@ -521,28 +706,24 @@ const CategoryPage = () => {
                           )}
                         </h4>
                         <div className="category-meta">
-                          <span className={`transaction-type ${category.transactionTypesId == 1 ? 'expense' : 'income'}`}>
-                            {category.transactionTypesId == 1 ? 'Chi tiêu' : 'Thu nhập'}
+                          <span
+                            className={`transaction-type ${category.transactionTypesId == 1 ? "expense" : "income"}`}
+                          >
+                            {category.transactionTypesId == 1 ? "Chi tiêu" : "Thu nhập"}
                           </span>
                           {category.parentId && (
                             <span className="parent-category">
-                              Danh mục cha: {categories.find(c => c.id === category.parentId)?.name}
+                              Danh mục cha: {categories.find((c) => c.id === category.parentId)?.name}
                             </span>
                           )}
                         </div>
                       </div>
                       <div className="category-actions">
-                        <Button
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() => handleEdit(category)}
-                        >
+                        <Button className="btn btn-sm btn-outline-primary" onClick={() => handleEdit(category)}>
                           <i className="fas fa-edit"></i>
                         </Button>
                         {canDeleteCategory(category) ? (
-                          <Button
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => handleDelete(category.id)}
-                          >
+                          <Button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(category.id)}>
                             <i className="fas fa-trash"></i>
                           </Button>
                         ) : (
@@ -559,7 +740,7 @@ const CategoryPage = () => {
                     <div className="category-stats">
                       <div className="transaction-count">
                         <i className="fas fa-receipt"></i>
-                        {category.transaction_count || 0} giao dịch
+                        {category.transaction_count || (category.transactions ? category.transactions.length : 0)} giao dịch
                       </div>
                     </div>
                   </div>
@@ -580,23 +761,17 @@ const CategoryPage = () => {
                 {/* Controls để mở rộng/thu gọn tất cả */}
                 <div className="category-controls">
                   <div className="expand-collapse-controls">
-                    <Button
-                      className="btn btn-sm btn-outline-secondary"
-                      onClick={expandAll}
-                    >
+                    <Button className="btn btn-sm btn-outline-secondary" onClick={expandAll}>
                       <i className="fas fa-expand-alt"></i>
                       Mở rộng tất cả
                     </Button>
-                    <Button
-                      className="btn btn-sm btn-outline-secondary"
-                      onClick={collapseAll}
-                    >
+                    <Button className="btn btn-sm btn-outline-secondary" onClick={collapseAll}>
                       <i className="fas fa-compress-alt"></i>
                       Thu gọn tất cả
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="categories-grid">
                   {parentCategories.map((parentCategory) => {
                     const childCategories = getChildCategories(parentCategory.id)
@@ -620,13 +795,13 @@ const CategoryPage = () => {
                               )}
                             </h3>
                             <div className="category-meta">
-                              <span className={`transaction-type ${parentCategory.transactionTypesId == 1 ? 'expense' : 'income'}`}>
-                                {parentCategory.transactionTypesId == 1 ? 'Chi tiêu' : 'Thu nhập'}
+                              <span
+                                className={`transaction-type ${parentCategory.transactionTypesId == 1 ? "expense" : "income"}`}
+                              >
+                                {parentCategory.transactionTypesId == 1 ? "Chi tiêu" : "Thu nhập"}
                               </span>
                               {childCategories.length > 0 && (
-                                <span className="children-count">
-                                  {childCategories.length} danh mục con
-                                </span>
+                                <span className="children-count">{childCategories.length} danh mục con</span>
                               )}
                             </div>
                           </div>
@@ -638,7 +813,7 @@ const CategoryPage = () => {
                                 onClick={() => toggleCategoryExpansion(parentCategory.id)}
                                 title={isExpanded ? "Thu gọn" : "Mở rộng"}
                               >
-                                <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'}`}></i>
+                                <i className={`fas fa-chevron-${isExpanded ? "up" : "down"}`}></i>
                               </Button>
                             )}
                             <Button
@@ -676,7 +851,7 @@ const CategoryPage = () => {
 
                         {/* Child Categories - Dropdown Content */}
                         {childCategories.length > 0 && (
-                          <div className={`child-categories ${isExpanded ? 'expanded' : 'collapsed'}`}>
+                          <div className={`child-categories ${isExpanded ? "expanded" : "collapsed"}`}>
                             <div className="child-categories-header">
                               <h4>Danh mục con</h4>
                             </div>
@@ -698,7 +873,7 @@ const CategoryPage = () => {
                                       </h5>
                                       <div className="transaction-count">
                                         <i className="fas fa-receipt"></i>
-                                        {childCategory.transaction_count || 0}
+                                        {childCategory.transactions ? childCategory.transactions.length : 0}
                                       </div>
                                     </div>
                                   </div>
@@ -743,10 +918,7 @@ const CategoryPage = () => {
                 <i className="fas fa-folder-open"></i>
                 <h3>Chưa có danh mục nào</h3>
                 <p>Hãy thêm danh mục đầu tiên để bắt đầu quản lý chi tiêu của bạn</p>
-                <Button
-                  className="btn btn-primary"
-                  onClick={() => setShowForm(true)}
-                >
+                <Button className="btn btn-primary" onClick={() => setShowForm(true)}>
                   <i className="fas fa-plus"></i>
                   Thêm danh mục đầu tiên
                 </Button>

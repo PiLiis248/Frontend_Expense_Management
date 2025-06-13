@@ -1,5 +1,4 @@
 .categories-page {
-  padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
   background: #f8f9fa;
@@ -167,6 +166,7 @@
   font-size: 14px;
   padding: 10px 12px;
   min-width: 0;
+  color: black;
 }
 
 .icon-input:focus {
@@ -396,13 +396,15 @@
 
 /* Categories Grid */
 .categories-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 20px;
 }
 
 .search-grid {
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* Category Cards */
@@ -413,6 +415,8 @@
   padding: 20px;
   transition: all 0.2s ease;
   position: relative;
+  width: 100%;
+  max-width: none;
 }
 
 .category-card:hover {
@@ -730,44 +734,44 @@
   .categories-page {
     padding: 16px;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .categories-grid {
-    grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .search-grid {
-    grid-template-columns: 1fr;
+    gap: 12px;
   }
-  
+
   .category-card-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
-  
+
   .category-actions {
     align-self: flex-end;
   }
-  
+
   .expand-collapse-controls {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .form-actions {
     flex-direction: column-reverse;
   }
-  
+
   .form-actions button {
     width: 100%;
   }
 }
+
 
 @media (max-width: 480px) {
   .categories-page {

@@ -67,7 +67,7 @@
 
 .search-container i {
   position: absolute;
-  left: 12px;
+  left: -2px;
   top: 50%;
   transform: translateY(-50%);
   color: #777;
@@ -79,6 +79,8 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 14px;
+  background-color: white;
+  color: black;
 }
 
 .search-container input:focus {

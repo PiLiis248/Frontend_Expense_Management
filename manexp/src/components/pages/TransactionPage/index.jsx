@@ -21,17 +21,20 @@ const TransactionsPage = () => {
   const [editingId, setEditingId] = useState(null)
   const [editData, setEditData] = useState({})
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, transactionId: null, transactionInfo: null })
-  
+
+  // Form validation errors
+  const [formErrors, setFormErrors] = useState({})
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(5)
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
-  
+
   // Sorting states
-  const [sortField, setSortField] = useState('transactionDate')
-  const [sortDirection, setSortDirection] = useState('desc')
-  
+  const [sortField, setSortField] = useState("transactionDate")
+  const [sortDirection, setSortDirection] = useState("desc")
+
   const [formData, setFormData] = useState({
     amount: "",
     description: "",
@@ -49,20 +52,62 @@ const TransactionsPage = () => {
     toDate: "",
   })
 
+  // Validate form data
+  const validateForm = () => {
+    const errors = {}
+
+    if (!formData.amount || formData.amount.trim() === "") {
+      errors.amount = "Vui lòng nhập số tiền"
+    } else if (isNaN(formData.amount) || Number(formData.amount) <= 0) {
+      errors.amount = "Số tiền phải là số dương"
+    }
+
+    if (!formData.description || formData.description.trim() === "") {
+      errors.description = "Vui lòng nhập mô tả"
+    }
+
+    if (!formData.categoriesId) {
+      errors.categoriesId = "Vui lòng chọn danh mục"
+    }
+
+    if (!formData.moneySourcesId) {
+      errors.moneySourcesId = "Vui lòng chọn nguồn tiền"
+    }
+
+    if (!formData.transactionDate) {
+      errors.transactionDate = "Vui lòng chọn ngày giao dịch"
+    }
+
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  // Clear form errors when input changes
+  const clearFieldError = (fieldName) => {
+    if (formErrors[fieldName]) {
+      setFormErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors[fieldName]
+        return newErrors
+      })
+    }
+  }
+
   // Fetch data functions
   const fetchTransactions = async () => {
     try {
       setLoading(true)
-      
+
       // Prepare pagination and sorting parameters
+      // Backend expects pageNumber starting from 0, but UI shows starting from 1
       const params = {
-        pageNumber: currentPage,
+        pageNumber: currentPage - 1, // Convert UI page (1-based) to backend page (0-based)
         size: itemsPerPage,
-        sort: `${sortField},${sortDirection}`
+        sort: `${sortField},${sortDirection}`,
       }
 
       const response = await transactionService.getTransactionsWithPagination(null, params)
-      
+
       if (response && response.content) {
         setTransactions(response.content)
         setTotalPages(response.totalPages)
@@ -84,10 +129,10 @@ const TransactionsPage = () => {
   const fetchFilteredTransactions = async () => {
     try {
       setLoading(true)
-      
+
       // Prepare filter parameters
       const filterParams = {}
-      
+
       if (filters.transactionTypesName !== "all") {
         filterParams.transactionTypesName = filters.transactionTypesName
       }
@@ -105,7 +150,7 @@ const TransactionsPage = () => {
       }
 
       const response = await transactionService.getFilteredTransactions(filterParams)
-      
+
       if (response) {
         setTransactions(Array.isArray(response) ? response : [])
         // For filtered results, we might need to handle pagination differently
@@ -151,28 +196,29 @@ const TransactionsPage = () => {
 
   // Fetch transactions when page, sort, or filters change
   useEffect(() => {
-    const hasActiveFilters = filters.transactionTypesName !== "all" || 
-                           filters.categoriesName || 
-                           filters.moneySourceName || 
-                           filters.fromDate || 
-                           filters.toDate
+    const hasActiveFilters =
+      filters.transactionTypesName !== "all" ||
+      filters.categoriesName ||
+      filters.moneySourceName ||
+      filters.fromDate ||
+      filters.toDate
 
     if (hasActiveFilters) {
       fetchFilteredTransactions()
     } else {
       fetchTransactions()
     }
-  }, [currentPage, sortField, sortDirection])
+  }, [currentPage, sortField, sortDirection, filters])
 
   // Handle sorting
   const handleSort = (field) => {
     if (sortField === field) {
       // Toggle direction if same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
     } else {
       // Set new field with default direction
       setSortField(field)
-      setSortDirection('desc')
+      setSortDirection("desc")
     }
     setCurrentPage(1) // Reset to first page when sorting
   }
@@ -200,6 +246,8 @@ const TransactionsPage = () => {
       ...prev,
       [name]: value,
     }))
+    // Clear error for this field when user starts typing
+    clearFieldError(name)
   }
 
   // Handle filter changes
@@ -214,11 +262,12 @@ const TransactionsPage = () => {
   // Apply filters
   const applyFilters = () => {
     setCurrentPage(1)
-    const hasActiveFilters = filters.transactionTypesName !== "all" || 
-                           filters.categoriesName || 
-                           filters.moneySourceName || 
-                           filters.fromDate || 
-                           filters.toDate
+    const hasActiveFilters =
+      filters.transactionTypesName !== "all" ||
+      filters.categoriesName ||
+      filters.moneySourceName ||
+      filters.fromDate ||
+      filters.toDate
 
     if (hasActiveFilters) {
       fetchFilteredTransactions()
@@ -230,9 +279,9 @@ const TransactionsPage = () => {
   // Handle edit input changes
   const handleEditInputChange = (e) => {
     const { name, value } = e.target
-    
-    if (name === 'amount') {
-      const numericValue = value.replace(/[^\d]/g, '')
+
+    if (name === "amount") {
+      const numericValue = value.replace(/[^\d]/g, "")
       setEditData((prev) => ({
         ...prev,
         [name]: numericValue,
@@ -248,10 +297,15 @@ const TransactionsPage = () => {
   // Start editing a transaction
   const handleEditTransaction = (transaction) => {
     setEditingId(transaction.id)
+    // Format the date properly for the date input (YYYY-MM-DD)
+    const formattedDate = transaction.transactionDate
+      ? new Date(transaction.transactionDate).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0]
+
     setEditData({
       amount: transaction.amount.toString(),
       description: transaction.description,
-      transactionDate: transaction.transactionDate,
+      transactionDate: formattedDate,
       categoriesId: transaction.categoriesId?.toString() || "",
       moneySourcesId: transaction.moneySourcesId?.toString() || "",
       transactionTypeType: transaction.transactionTypeType || "EXPENSE",
@@ -265,7 +319,7 @@ const TransactionsPage = () => {
       return
     }
 
-    const amount = parseInt(editData.amount)
+    const amount = Number.parseInt(editData.amount)
     if (isNaN(amount) || amount <= 0) {
       showToast("Số tiền phải là số nguyên dương", "error")
       return
@@ -277,16 +331,17 @@ const TransactionsPage = () => {
         description: editData.description.trim(),
         transactionDate: editData.transactionDate,
         transactionTypeType: editData.transactionTypeType,
-        categoriesId: parseInt(editData.categoriesId),
-        moneySourcesId: parseInt(editData.moneySourcesId),
+        categoriesId: Number.parseInt(editData.categoriesId),
+        moneySourcesId: Number.parseInt(editData.moneySourcesId),
+        // userId and transactionTypeId will be added by the service
       }
 
       await transactionService.updateTransaction(editingId, updateData)
-      
+
       setEditingId(null)
       setEditData({})
       showToast("Giao dịch đã được cập nhật!", "success")
-      
+
       // Refresh transactions
       fetchTransactions()
     } catch (error) {
@@ -301,40 +356,62 @@ const TransactionsPage = () => {
     setEditData({})
   }
 
+  // Handle showing form modal
+  const handleShowForm = () => {
+    // Check if there are any active money sources
+    const activeWallets = moneySources.filter((wallet) => wallet.isActive === true)
+
+    if (activeWallets.length === 0) {
+      // No active wallets, show toast message
+      showToast("Vui lòng kích hoạt ít nhất một ví tiền để thêm giao dịch", "error")
+      return
+    }
+
+    // There are active wallets, show the form
+    setShowForm(true)
+    setFormErrors({}) // Clear any previous errors
+  }
+
+  // Handle closing form modal
+  const handleCloseForm = () => {
+    setShowForm(false)
+    setFormErrors({})
+    // Reset form data
+    setFormData({
+      amount: "",
+      description: "",
+      transactionTypeType: "EXPENSE",
+      transactionDate: new Date().toISOString().split("T")[0],
+      categoriesId: "",
+      moneySourcesId: "",
+    })
+  }
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!formData.amount || !formData.description || !formData.categoriesId || !formData.moneySourcesId) {
-      showToast("Vui lòng điền đầy đủ thông tin", "error")
+    if (!validateForm()) {
+      showToast("Vui lòng kiểm tra và sửa lỗi trong form", "error")
       return
     }
 
     try {
       const transactionData = {
-        amount: parseFloat(formData.amount),
-        description: formData.description,
+        amount: Number.parseFloat(formData.amount),
+        description: formData.description.trim(),
         transactionTypeType: formData.transactionTypeType,
         transactionDate: formData.transactionDate,
-        categoriesId: parseInt(formData.categoriesId),
-        moneySourcesId: parseInt(formData.moneySourcesId),
+        categoriesId: Number.parseInt(formData.categoriesId),
+        moneySourcesId: Number.parseInt(formData.moneySourcesId),
+        // userId and transactionTypeId will be added by the service
       }
 
       await transactionService.createTransaction(transactionData)
 
-      // Reset form
-      setFormData({
-        amount: "",
-        description: "",
-        transactionTypeType: "EXPENSE",
-        transactionDate: new Date().toISOString().split("T")[0],
-        categoriesId: "",
-        moneySourcesId: "",
-      })
-
-      setShowForm(false)
+      handleCloseForm()
       showToast("Giao dịch đã được thêm thành công!", "success")
-      
+
       // Refresh transactions
       fetchTransactions()
     } catch (error) {
@@ -352,8 +429,8 @@ const TransactionsPage = () => {
         description: transaction.description,
         amount: formatCurrency(transaction.amount),
         date: formatDate(transaction.transactionDate),
-        type: transaction.transactionTypeType === "INCOME" ? "Thu nhập" : "Chi tiêu"
-      }
+        type: transaction.transactionTypeType === "INCOME" ? "Thu nhập" : "Chi tiêu",
+      },
     })
   }
 
@@ -370,9 +447,9 @@ const TransactionsPage = () => {
         await transactionService.deleteTransaction(deleteModal.transactionId)
         showToast("Giao dịch đã được xóa", "success")
       }
-      
+
       setDeleteModal({ isOpen: false, transactionId: null, transactionInfo: null })
-      
+
       // Refresh transactions
       fetchTransactions()
     } catch (error) {
@@ -389,7 +466,7 @@ const TransactionsPage = () => {
   // Handle select all checkbox
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      const allIds = transactions.map(t => t.id)
+      const allIds = transactions.map((t) => t.id)
       setSelectedTransactions(allIds)
     } else {
       setSelectedTransactions([])
@@ -398,9 +475,9 @@ const TransactionsPage = () => {
 
   // Handle individual checkbox
   const handleSelectTransaction = (transactionId) => {
-    setSelectedTransactions(prev => {
+    setSelectedTransactions((prev) => {
       if (prev.includes(transactionId)) {
-        return prev.filter(id => id !== transactionId)
+        return prev.filter((id) => id !== transactionId)
       } else {
         return [...prev, transactionId]
       }
@@ -409,15 +486,15 @@ const TransactionsPage = () => {
 
   // Handle bulk delete request
   const handleBulkDeleteRequest = () => {
-    const selectedTransactionData = transactions.filter(t => selectedTransactions.includes(t.id))
-    
+    const selectedTransactionData = transactions.filter((t) => selectedTransactions.includes(t.id))
+
     setDeleteModal({
       isOpen: true,
       transactionId: null,
       transactionInfo: {
         count: selectedTransactions.length,
         transactions: selectedTransactionData,
-      }
+      },
     })
   }
 
@@ -425,34 +502,34 @@ const TransactionsPage = () => {
   const generatePageNumbers = () => {
     const pageNumbers = []
     const maxVisiblePages = 3
-    
+
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i)
       }
     } else {
       let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
-      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
-      
+      const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
+
       if (endPage - startPage + 1 < maxVisiblePages) {
         startPage = Math.max(1, endPage - maxVisiblePages + 1)
       }
-      
+
       for (let i = startPage; i <= endPage; i++) {
         pageNumbers.push(i)
       }
-      
+
       if (endPage < totalPages) {
-        pageNumbers.push('...')
+        pageNumbers.push("...")
       }
     }
-    
+
     return pageNumbers
   }
 
   // Handle page change
   const handlePageChange = (pageNumber) => {
-    if (pageNumber !== '...' && pageNumber >= 1 && pageNumber <= totalPages) {
+    if (pageNumber !== "..." && pageNumber >= 1 && pageNumber <= totalPages) {
       setCurrentPage(pageNumber)
     }
   }
@@ -471,10 +548,25 @@ const TransactionsPage = () => {
     }
   }
 
-  // Get sort icon
+  // Get sort icon component
   const getSortIcon = (field) => {
-    if (sortField !== field) return '↕️'
-    return sortDirection === 'asc' ? '↑' : '↓'
+    const isActive = sortField === field
+    const isAsc = sortDirection === "asc"
+
+    return (
+      <div className="sort-arrows">
+        <div className={`sort-arrow sort-arrow-up ${isActive && isAsc ? "active" : ""}`}>
+          <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+            <path d="M4 0L7.464 6H0.536L4 0Z" fill="currentColor" />
+          </svg>
+        </div>
+        <div className={`sort-arrow sort-arrow-down ${isActive && !isAsc ? "active" : ""}`}>
+          <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+            <path d="M4 6L0.536 0H7.464L4 6Z" fill="currentColor" />
+          </svg>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -490,13 +582,7 @@ const TransactionsPage = () => {
   return (
     <div className="transactions-page">
       {/* Toast notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Delete confirmation modal */}
       <ConfirmModal
@@ -511,207 +597,210 @@ const TransactionsPage = () => {
         warnings={["Hành động này không thể hoàn tác!"]}
       />
 
-      <div className="page-header">
-        <h1 className="page-title">Quản lý giao dịch</h1>
-        <Button 
-          className="btn btn-primary" 
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? "Hủy" : "Thêm giao dịch mới"}
-        </Button>
-      </div>
-
+      {/* Transaction Form Modal */}
       {showForm && (
-        <div className="transaction-form-container">
-          <form className="transaction-form" onSubmit={handleSubmit}>
-            <h2>Thêm giao dịch mới</h2>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="transactionTypeType">Loại giao dịch</label>
-                <select
-                  id="transactionTypeType"
-                  name="transactionTypeType"
-                  className="form-control"
-                  value={formData.transactionTypeType}
-                  onChange={handleInputChange}
-                  required
-                >
-                  <option value="EXPENSE">Chi tiêu</option>
-                  <option value="INCOME">Thu nhập</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <InputField
-                  label="Số tiền"
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleInputChange}
-                  placeholder="Nhập số tiền"
-                  className="form-control"
-                />
-              </div>
+        <div className="modal-overlay" onClick={handleCloseForm}>
+          <div className="modal-content transaction-form-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Thêm giao dịch mới</h2>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="categoriesId">Danh mục</label>
-                <select
-                  id="categoriesId"
-                  name="categoriesId"
-                  className="form-control"
-                  value={formData.categoriesId}
-                  onChange={handleInputChange}
-                  required
-                >
-                  <option value="">Chọn danh mục</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+            <form className="transaction-form" onSubmit={handleSubmit}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="transactionTypeType">Loại giao dịch</label>
+                  <select
+                    id="transactionTypeType"
+                    name="transactionTypeType"
+                    className="form-control"
+                    value={formData.transactionTypeType}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="EXPENSE">Chi tiêu</option>
+                    <option value="INCOME">Thu nhập</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="categoriesId">Danh mục</label>
+                  <select
+                    id="categoriesId"
+                    name="categoriesId"
+                    className={`form-control ${formErrors.categoriesId ? "error" : ""}`}
+                    value={formData.categoriesId}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="">Chọn danh mục</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.categoriesId && <p className="error">{formErrors.categoriesId}</p>}
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="moneySourcesId">Nguồn tiền</label>
+                  <select
+                    id="moneySourcesId"
+                    name="moneySourcesId"
+                    className={`form-control ${formErrors.moneySourcesId ? "error" : ""}`}
+                    value={formData.moneySourcesId}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="">Chọn nguồn tiền</option>
+                    {moneySources
+                      .filter((source) => source.isActive === true)
+                      .map((source) => (
+                        <option key={source.id} value={source.id}>
+                          {source.name}
+                        </option>
+                      ))}
+                  </select>
+                  {formErrors.moneySourcesId && <p className="error">{formErrors.moneySourcesId}</p>}
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="moneySourcesId">Nguồn tiền</label>
-                <select
-                  id="moneySourcesId"
-                  name="moneySourcesId"
-                  className="form-control"
-                  value={formData.moneySourcesId}
-                  onChange={handleInputChange}
-                  required
-                >
-                  <option value="">Chọn nguồn tiền</option>
-                  {moneySources.map((source) => (
-                    <option key={source.id} value={source.id}>
-                      {source.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <InputField
+                    label="Số tiền"
+                    type="number"
+                    name="amount"
+                    value={formData.amount}
+                    onChange={handleInputChange}
+                    placeholder="Nhập số tiền"
+                    className="form-control"
+                    error={formErrors.amount}
+                  />
+                </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <InputField
-                  label="Mô tả"
-                  type="text"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Nhập mô tả giao dịch"
-                  className="form-control"
-                />
+                <div className="form-group">
+                  <InputField
+                    label="Mô tả"
+                    type="text"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder="Nhập mô tả giao dịch"
+                    className="form-control"
+                    error={formErrors.description}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <InputField
+                    label="Ngày giao dịch"
+                    type="date"
+                    name="transactionDate"
+                    value={formData.transactionDate}
+                    onChange={handleInputChange}
+                    className="form-control"
+                    error={formErrors.transactionDate}
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <InputField
-                  label="Ngày giao dịch"
-                  type="date"
-                  name="transactionDate"
-                  value={formData.transactionDate}
-                  onChange={handleInputChange}
-                  className="form-control"
-                />
+              <div className="form-actions">
+                <Button type="submit" className="btn btn-primary">
+                  Lưu giao dịch
+                </Button>
+                <Button type="button" className="btn btn-secondary" onClick={handleCloseForm}>
+                  Hủy
+                </Button>
               </div>
-            </div>
-
-            <div className="form-actions">
-              <Button type="submit" className="btn btn-primary">
-                Lưu giao dịch
-              </Button>
-              <Button 
-                type="button" 
-                className="btn btn-secondary" 
-                onClick={() => setShowForm(false)}
-              >
-                Hủy
-              </Button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       )}
 
+      <div className="page-header-compact">
+        <Button className="btn btn-primary" onClick={handleShowForm}>
+          Thêm giao dịch mới
+        </Button>
+      </div>
+
       <div className="filters-container">
-        <h3>Bộ lọc</h3>
         <div className="filters-form">
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="filter-action">Loại giao dịch</label>
+          <div className="filters-row">
+            <div className="filter-group">
               <select
                 id="filter-action"
                 name="transactionTypesName"
-                className="form-control"
+                className="filter-control"
                 value={filters.transactionTypesName}
                 onChange={handleFilterChange}
               >
-                <option value="all">Tất cả</option>
+                <option value="all">Tất cả giao dịch</option>
                 <option value="EXPENSE">Chi tiêu</option>
                 <option value="INCOME">Thu nhập</option>
               </select>
             </div>
 
-            <div className="form-group">
-              <InputField
-                label="Tên danh mục"
-                type="text"
+            <div className="filter-group">
+              <select
+                id="filter-category"
                 name="categoriesName"
+                className="filter-control"
                 value={filters.categoriesName}
                 onChange={handleFilterChange}
-                placeholder="Nhập tên danh mục"
-                className="form-control"
-              />
+              >
+                <option value="">Danh mục</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.name}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="form-group">
-              <InputField
-                label="Tên nguồn tiền"
-                type="text"
+            <div className="filter-group">
+              <select
+                id="filter-money-source"
                 name="moneySourceName"
+                className="filter-control"
                 value={filters.moneySourceName}
                 onChange={handleFilterChange}
-                placeholder="Nhập tên nguồn tiền"
-                className="form-control"
-              />
+              >
+                <option value="">Nguồn tiền</option>
+                {moneySources.map((source) => (
+                  <option key={source.id} value={source.name}>
+                    {source.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <InputField
-                label="Từ ngày"
+            <div className="filter-group date-range">
+              <input
                 type="date"
                 name="fromDate"
                 value={filters.fromDate}
                 onChange={handleFilterChange}
-                className="form-control"
+                className="filter-control"
+                placeholder="Từ ngày"
               />
-            </div>
-
-            <div className="form-group">
-              <InputField
-                label="Đến ngày"
+              <span className="date-separator">-</span>
+              <input
                 type="date"
                 name="toDate"
                 value={filters.toDate}
                 onChange={handleFilterChange}
-                className="form-control"
+                className="filter-control"
+                placeholder="Đến ngày"
               />
             </div>
 
-            <div className="form-group filter-actions">
-              <Button
-                className="btn btn-primary"
-                onClick={applyFilters}
-              >
-                Áp dụng lọc
+            <div className="filter-actions">
+              <Button className="btn btn-primary btn-sm" onClick={applyFilters}>
+                Lọc
               </Button>
               <Button
-                className="btn btn-secondary"
+                className="btn btn-secondary btn-sm"
                 onClick={() => {
                   setFilters({
                     transactionTypesName: "all",
@@ -720,7 +809,7 @@ const TransactionsPage = () => {
                     fromDate: "",
                     toDate: "",
                   })
-                  fetchTransactions()
+                  setCurrentPage(1)
                 }}
               >
                 Đặt lại
@@ -734,18 +823,10 @@ const TransactionsPage = () => {
         <div className="transactions-header">
           <div className="header-left">
             <h3>Danh sách giao dịch ({totalElements})</h3>
-            {selectedTransactions.length > 0 && (
-              <div className="selection-info">
-                Đã chọn: {selectedTransactions.length} / {transactions.length}
-              </div>
-            )}
           </div>
           <div className="header-actions">
             {selectedTransactions.length >= 2 && (
-              <Button 
-                className="btn btn-danger bulk-delete-btn"
-                onClick={handleBulkDeleteRequest}
-              >
+              <Button className="btn btn-danger bulk-delete-btn" onClick={handleBulkDeleteRequest}>
                 Xóa {selectedTransactions.length} giao dịch
               </Button>
             )}
@@ -763,7 +844,7 @@ const TransactionsPage = () => {
           </div>
         ) : (
           <>
-            <div className="transactions-table-container">
+            <div className="transactions-table-container" style={{ height: "400px" }}>
               <table className="transactions-table">
                 <thead>
                   <tr>
@@ -775,20 +856,20 @@ const TransactionsPage = () => {
                         className="select-all-checkbox"
                       />
                     </th>
-                    <th 
-                      className="sortable-header"
-                      onClick={() => handleSort('transactionDate')}
-                    >
-                      Ngày {getSortIcon('transactionDate')}
+                    <th className="sortable-header" onClick={() => handleSort("transactionDate")}>
+                      <div className="header-content">
+                        <span>Ngày</span>
+                        {getSortIcon("transactionDate")}
+                      </div>
                     </th>
                     <th>Mô tả</th>
                     <th>Danh mục</th>
                     <th>Nguồn tiền</th>
-                    <th 
-                      className="sortable-header"
-                      onClick={() => handleSort('amount')}
-                    >
-                      Số tiền {getSortIcon('amount')}
+                    <th className="sortable-header" onClick={() => handleSort("amount")}>
+                      <div className="header-content">
+                        <span>Số tiền</span>
+                        {getSortIcon("amount")}
+                      </div>
                     </th>
                     <th>Thao tác</th>
                   </tr>
@@ -798,9 +879,9 @@ const TransactionsPage = () => {
                     const isSelected = selectedTransactions.includes(transaction.id)
                     const isExpense = transaction.transactionTypeType === "EXPENSE"
                     return (
-                      <tr 
-                        key={transaction.id} 
-                        className={`${isExpense ? 'expense' : 'income'} ${isSelected ? 'selected' : ''}`}
+                      <tr
+                        key={transaction.id}
+                        className={`${isExpense ? "expense" : "income"} ${isSelected ? "selected" : ""}`}
                       >
                         <td>
                           <input
@@ -869,22 +950,23 @@ const TransactionsPage = () => {
                                   {source.name}
                                 </option>
                               ))}
-                            </select>) : (
+                            </select>
+                          ) : (
                             transaction.moneySourcesName || "N/A"
                           )}
                         </td>
-                        <td className={`amount-cell ${isExpense ? 'expense-amount' : 'income-amount'}`}>
+                        <td className={`amount-cell ${isExpense ? "expense-amount" : "income-amount"}`}>
                           {editingId === transaction.id ? (
                             <div className="edit-amount-container">
-                              <select
+                              {/* <select
                                 name="transactionTypeType"
                                 value={editData.transactionTypeType}
                                 onChange={handleEditInputChange}
                                 className="action-select"
                               >
                                 <option value="EXPENSE">-</option>
-                                <option value="INCOME">+</option>
-                              </select>
+                                <option value="INCOME">+)</option>
+                              </select> */}
                               <input
                                 type="text"
                                 name="amount"
@@ -913,13 +995,10 @@ const TransactionsPage = () => {
                               </>
                             ) : (
                               <>
-                                <Button 
-                                  className="btn-icon edit" 
-                                  onClick={() => handleEditTransaction(transaction)}
-                                >
+                                <Button className="btn-icon edit" onClick={() => handleEditTransaction(transaction)}>
                                   🖋
                                 </Button>
-                                <Button 
+                                <Button
                                   className="btn-icon delete"
                                   onClick={() => handleDeleteTransactionRequest(transaction)}
                                 >
@@ -940,36 +1019,32 @@ const TransactionsPage = () => {
             {totalPages > 1 && (
               <div className="pagination-container">
                 <div className="pagination">
-                  <Button 
-                    className={`pagination-btn ${currentPage === 1 ? 'disabled' : ''}`}
+                  <Button
+                    className={`pagination-btn ${currentPage === 1 ? "disabled" : ""}`}
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
                   >
                     Trước
                   </Button>
-                  
+
                   {generatePageNumbers().map((pageNum, index) => (
                     <Button
                       key={index}
-                      className={`pagination-btn ${pageNum === currentPage ? 'active' : ''} ${pageNum === '...' ? 'ellipsis' : ''}`}
+                      className={`pagination-btn ${pageNum === currentPage ? "active" : ""} ${pageNum === "..." ? "ellipsis" : ""}`}
                       onClick={() => handlePageChange(pageNum)}
-                      disabled={pageNum === '...'}
+                      disabled={pageNum === "..."}
                     >
                       {pageNum}
                     </Button>
                   ))}
-                  
-                  <Button 
-                    className={`pagination-btn ${currentPage === totalPages ? 'disabled' : ''}`}
+
+                  <Button
+                    className={`pagination-btn ${currentPage === totalPages ? "disabled" : ""}`}
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
                   >
                     Sau
                   </Button>
-                </div>
-                
-                <div className="pagination-summary">
-                  Hiển thị {Math.min((currentPage - 1) * itemsPerPage + 1, totalElements)} - {Math.min(currentPage * itemsPerPage, totalElements)} của {totalElements} giao dịch
                 </div>
               </div>
             )}

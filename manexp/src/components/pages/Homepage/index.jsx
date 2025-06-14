@@ -4,6 +4,9 @@ import { useState, useEffect } from "react"
 import "../../../assets/HomePage.css"
 import Toast from "../../common/Toast"
 import PATHS from "../../../constants/path"
+import transactionService from "../../../services/transactionService"
+import spendingLimitService from "../../../services/spendingLimitService"
+import categoryService from "../../../services/categoryService"
 
 const HomePage = () => {
   const [summary, setSummary] = useState({
@@ -18,81 +21,78 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate fetching data
-    // In a real app, you would call your API here
     const fetchData = async () => {
       try {
         setLoading(true)
-        // In a real implementation, you would fetch data from API endpoints:
-        // const summaryData = await fetch('/api/summary').then(res => res.json())
-        // const transactionsData = await fetch('/api/transactions/recent').then(res => res.json())
-        // const spendingLimitsData = await fetch('/api/spending-limits').then(res => res.json())
-        // const categoriesData = await fetch('/api/categories').then(res => res.json())
         
-        // Mock data
-        const mockSummary = {
-          totalIncome: 15000000,
-          totalExpense: 8500000,
-          balance: 6500000,
-          recentTransactions: [
-            {
-              id: 1,
-              amount: 200000,
-              description: "Ăn trưa",
-              action: "expense",
-              transaction_date: "2023-05-14",
-              category: "Ăn uống",
-            },
-            {
-              id: 2,
-              amount: 500000,
-              description: "Mua quần áo",
-              action: "expense",
-              transaction_date: "2023-05-13",
-              category: "Mua sắm",
-            },
-            {
-              id: 3,
-              amount: 10000000,
-              description: "Lương tháng 5",
-              action: "income",
-              transaction_date: "2023-05-10",
-              category: "Lương",
-            },
-            {
-              id: 4,
-              amount: 300000,
-              description: "Tiền điện",
-              action: "expense",
-              transaction_date: "2023-05-08",
-              category: "Hóa đơn",
-            },
-            {
-              id: 5,
-              amount: 5000000,
-              description: "Freelance",
-              action: "income",
-              transaction_date: "2023-05-05",
-              category: "Thu nhập khác",
-            },
-          ],
-          spendingLimits: [
-            { id: 1, category: "Ăn uống", limit_amount: 3000000, actual_spent: 1800000, period_type: "monthly" },
-            { id: 2, category: "Mua sắm", limit_amount: 2000000, actual_spent: 1500000, period_type: "monthly" },
-            { id: 3, category: "Giải trí", limit_amount: 1000000, actual_spent: 300000, period_type: "monthly" },
-          ],
-          categories: [
-            { id: 1, name: "Ăn uống", transaction_count: 15 },
-            { id: 2, name: "Mua sắm", transaction_count: 8 },
-            { id: 3, name: "Hóa đơn", transaction_count: 5 },
-            { id: 4, name: "Giải trí", transaction_count: 3 },
-          ],
-        }
+        // Fetch all data concurrently
+        const [
+          totalIncomeResponse,
+          totalExpenseResponse,
+          recentTransactionsResponse,
+          spendingLimitsResponse,
+          categoriesResponse
+        ] = await Promise.all([
+          transactionService.getTotalIncome("MONTH"),
+          transactionService.getTotalExpense("MONTH"),
+          transactionService.getRecentTransactions(null, 10),
+          spendingLimitService.getAllSpendingLimits(),
+          categoryService.getAllCategories()
+        ])
 
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        setSummary(mockSummary)
+        // Process the data
+        const totalIncome = totalIncomeResponse || 0
+        const totalExpense = totalExpenseResponse || 0
+        const balance = totalIncome - totalExpense
+
+        // Process recent transactions
+        const recentTransactions = recentTransactionsResponse?.content?.map(transaction => ({
+          id: transaction.id,
+          amount: transaction.amount,
+          description: transaction.description,
+          action: transaction.transactionTypeName === "Thu nhập" ? "income" : "expense",
+          transaction_date: transaction.transactionDate,
+          category: transaction.categoriesName,
+        })) || []
+
+        // Process spending limits
+        const spendingLimits = spendingLimitsResponse?.map(limit => {
+          // Calculate actual spent amount for this category
+          // This would need to be calculated based on transactions in the current period
+          // For now, we'll use a placeholder or you might need an additional API call
+          const actualSpent = calculateActualSpent(limit, recentTransactionsResponse?.content || [])
+          
+          return {
+            id: limit.id,
+            category: limit.categoriesName,
+            limit_amount: limit.limitAmount,
+            actual_spent: actualSpent,
+            period_type: limit.periodType,
+          }
+        }).filter(limit => limit.category) || [] // Filter out limits without category names
+
+        // Process categories with transaction count
+        const categories = categoriesResponse?.map(category => {
+          // Count transactions for this category
+          const transactionCount = recentTransactionsResponse?.content?.filter(
+            transaction => transaction.categoriesId === category.id
+          ).length || 0
+
+          return {
+            id: category.id,
+            name: category.name,
+            transaction_count: transactionCount,
+          }
+        }) || []
+
+        setSummary({
+          totalIncome,
+          totalExpense,
+          balance,
+          recentTransactions,
+          spendingLimits,
+          categories,
+        })
         setError(null)
       } catch (err) {
         console.error("Error fetching dashboard data:", err)
@@ -104,6 +104,45 @@ const HomePage = () => {
 
     fetchData()
   }, [])
+
+  // Helper function to calculate actual spent amount for a spending limit
+  const calculateActualSpent = (limit, transactions) => {
+    if (!limit.categoriesId || !transactions.length) return 0
+
+    // Filter transactions for this category and period
+    const now = new Date()
+    let startDate = new Date()
+
+    // Calculate start date based on period type
+    switch (limit.periodType?.toLowerCase()) {
+      case 'daily':
+        startDate.setHours(0, 0, 0, 0)
+        break
+      case 'weekly':
+        startDate.setDate(now.getDate() - 7)
+        break
+      case 'monthly':
+      default:
+        startDate.setDate(1)
+        startDate.setHours(0, 0, 0, 0)
+        break
+    }
+
+    // Sum up expenses for this category in the current period
+    const actualSpent = transactions
+      .filter(transaction => {
+        const transactionDate = new Date(transaction.transactionDate)
+        return (
+          transaction.categoriesId === limit.categoriesId &&
+          transaction.transactionTypeName !== "Thu nhập" &&
+          transactionDate >= startDate &&
+          transactionDate <= now
+        )
+      })
+      .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
+
+    return actualSpent
+  }
 
   // Close toast handler
   const handleCloseToast = () => {
@@ -123,6 +162,7 @@ const HomePage = () => {
 
   // Calculate percentage for spending limits
   const calculatePercentage = (actual, limit) => {
+    if (!limit || limit === 0) return 0
     return Math.round((actual / limit) * 100)
   }
 
@@ -140,8 +180,6 @@ const HomePage = () => {
           onClose={handleCloseToast} 
         />
       )}
-
-      {/* <h1 className="page-title">Tổng quan</h1> */}
 
       <div className="summary-cards">
         <div className="summary-card income">

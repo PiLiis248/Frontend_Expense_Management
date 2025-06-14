@@ -52,8 +52,8 @@ const spendingLimitService = {
         periodType: spendingLimitData.periodType, 
         startDate: spendingLimitData.startDate,
         note: spendingLimitData.note,
-        categoryId: spendingLimitData.categoryId,    // ✅ ĐÚNG cho Create
-        moneySourceId: spendingLimitData.moneySourceId, // ✅ ĐÚNG cho Create
+        categoryId: spendingLimitData.categoryId,    
+        moneySourceId: spendingLimitData.moneySourceId, 
         userId: spendingLimitData.userId || userId
       };
 

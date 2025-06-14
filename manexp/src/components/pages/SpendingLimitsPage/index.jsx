@@ -14,12 +14,10 @@ import "../../../assets/SpendingLimitsPage.css"
 const SpendingLimitsPage = () => {
   const { setWarningCount } = useWarning()
   const [spendingLimits, setSpendingLimits] = useState([])
-  const [historyLimits, setHistoryLimits] = useState([])
   const [categories, setCategories] = useState([])
   const [moneySources, setMoneySources] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
   const [formData, setFormData] = useState({
     limitAmount: "",
     periodType: "MONTHLY",
@@ -34,32 +32,26 @@ const SpendingLimitsPage = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [itemToDelete, setItemToDelete] = useState(null)
 
-  // NEW: States for delete history confirmation
-  const [showDeleteHistoryModal, setShowDeleteHistoryModal] = useState(false)
-  const [deletingHistory, setDeletingHistory] = useState(false)
-
   const pageTopRef = useRef(null)
-  const historyRef = useRef(null)
 
   useEffect(() => {
     fetchData()
   }, [])
 
-  // Calculate and update warning count whenever spending limits change
   useEffect(() => {
     const warningCount = calculateWarningCount()
     setWarningCount(warningCount)
   }, [spendingLimits, setWarningCount])
 
-  // Calculate warning count (80%+ usage)
   const calculateWarningCount = () => {
-    return spendingLimits.filter((limit) => {
-      if (!limit.active) return false
-      const actualSpent = limit.actualSpent || 0
-      const limitAmount = limit.limitAmount || 0
-      const percentage = limitAmount === 0 ? 0 : Math.round((actualSpent / limitAmount) * 100)
-      return percentage >= 80
-    }).length
+    return spendingLimits
+      .filter((limit) => limit.active)
+      .filter((limit) => {
+        const actualSpent = limit.actualSpent || 0
+        const limitAmount = limit.limitAmount || 0
+        const percentage = limitAmount === 0 ? 0 : Math.round((actualSpent / limitAmount) * 100)
+        return percentage >= 80
+      }).length
   }
 
   const fetchData = async () => {
@@ -72,14 +64,22 @@ const SpendingLimitsPage = () => {
         moneySourceService.getAllMoneySources(),
       ])
 
-      const allLimits = limitsResponse || []
+      // Process limits - check if any active limits need to be reset based on their period
+      const processedLimits = await Promise.all(
+        (limitsResponse || []).map(async (limit) => {
+          if (limit.active && shouldResetLimit(limit)) {
+            // Auto-reset the limit
+            await resetLimit(limit)
+            return null // This limit will be replaced by the new one
+          }
+          return limit
+        })
+      )
 
-      // Separate active/visible limits and history (inactive/hidden) limits
-      const activeLimits = allLimits.filter((limit) => limit.active && limit.isVisible !== false)
-      const hiddenLimits = allLimits.filter((limit) => !limit.active || limit.isVisible === false)
+      // Filter out null values (limits that were reset)
+      const validLimits = processedLimits.filter((limit) => limit !== null)
 
-      setSpendingLimits(activeLimits)
-      setHistoryLimits(hiddenLimits)
+      setSpendingLimits(validLimits)
       setCategories(categoriesResponse || [])
       setMoneySources(moneySourcesResponse || [])
     } catch (error) {
@@ -89,6 +89,59 @@ const SpendingLimitsPage = () => {
       setLoading(false)
     }
   }
+
+  const shouldResetLimit = (limit) => {
+    if (!limit.active) return false
+    const now = new Date()
+    const startDate = new Date(limit.startDate)
+    const endDate = getEndDate(startDate, limit.periodType)
+    return now >= endDate
+  }
+
+  const getEndDate = (startDate, periodType) => {
+    const endDate = new Date(startDate)
+
+    switch (periodType) {
+      case "DAILY":
+        endDate.setDate(endDate.getDate() + 1)
+        break
+      case "WEEKLY":
+        endDate.setDate(endDate.getDate() + 7)
+        break
+      case "MONTHLY":
+        endDate.setMonth(endDate.getMonth() + 1)
+        break
+      case "YEARLY":
+        endDate.setFullYear(endDate.getFullYear() + 1)
+        break
+      default:
+        endDate.setMonth(endDate.getMonth() + 1)
+    }
+
+    return endDate
+  }
+
+  const resetLimit = async (limit) => {
+  try {
+    // Xóa limit cũ thay vì deactivate
+    await spendingLimitService.deleteSpendingLimit(limit.id)
+
+    // Tạo limit mới với ngày hiện tại
+    const newLimitData = {
+      limitAmount: limit.limitAmount,
+      periodType: limit.periodType,
+      startDate: new Date().toISOString().split("T")[0],
+      categoryId: limit.categoriesId,
+      moneySourceId: limit.moneySourcesId,
+      note: limit.note || "",
+      isActive: true,
+    }
+
+    await spendingLimitService.createSpendingLimit(newLimitData)
+  } catch (error) {
+    console.error("Error resetting limit:", error)
+  }
+}
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
@@ -151,7 +204,10 @@ const SpendingLimitsPage = () => {
       setShowForm(false)
     } catch (error) {
       console.error("Error saving spending limit:", error)
-      showToast(editingId ? "Lỗi khi cập nhật mức chi tiêu" : "Lỗi khi thêm mức chi tiêu", "error")
+      showToast(
+        editingId ? "Lỗi khi cập nhật mức chi tiêu" : "Lỗi khi thêm mức chi tiêu",
+        "error"
+      )
     }
   }
 
@@ -168,15 +224,15 @@ const SpendingLimitsPage = () => {
     setEditingId(null)
   }
 
-  // FIXED: Handle edit with proper date formatting and preserve existing values
   const handleEdit = (limit) => {
-    // Format date properly for input field
-    const formattedDate = limit.startDate ? limit.startDate.split("T")[0] : new Date().toISOString().split("T")[0]
+    const formattedDate = limit.startDate
+      ? limit.startDate.split("T")[0]
+      : new Date().toISOString().split("T")[0]
 
     setFormData({
       limitAmount: limit.limitAmount.toString(),
       periodType: limit.periodType,
-      startDate: formattedDate, // FIXED: Use existing date value
+      startDate: formattedDate,
       categoryId: limit.categoriesId.toString(),
       moneySourceId: limit.moneySourcesId.toString(),
       note: limit.note || "",
@@ -218,112 +274,45 @@ const SpendingLimitsPage = () => {
     setItemToDelete(null)
   }
 
-  // NEW: Handle delete all history
-  const handleDeleteHistory = () => {
-    if (historyLimits.length === 0) {
-      showToast("Không có lịch sử để xóa", "warning")
-      return
-    }
-    setShowDeleteHistoryModal(true)
-  }
-
-  // NEW: Confirm delete all history
-  const confirmDeleteHistory = async () => {
-    if (historyLimits.length === 0) return
-
-    setDeletingHistory(true)
-    setShowDeleteHistoryModal(false)
-
-    try {
-      let successCount = 0
-      let errorCount = 0
-
-      // Delete each history item sequentially
-      for (const limit of historyLimits) {
-        try {
-          await spendingLimitService.deleteSpendingLimit(limit.id)
-          successCount++
-
-          // Show progress toast
-          showToast(`Đang xóa lịch sử... (${successCount}/${historyLimits.length})`, "info")
-        } catch (error) {
-          console.error(`Error deleting history item ${limit.id}:`, error)
-          errorCount++
-        }
-      }
-
-      // Show final result
-      if (errorCount === 0) {
-        showToast(`Xóa thành công ${successCount} mục lịch sử`, "success")
-      } else {
-        showToast(`Xóa thành công ${successCount} mục, thất bại ${errorCount} mục`, "warning")
-      }
-
-      // Refresh data
-      await fetchData()
-    } catch (error) {
-      console.error("Error deleting history:", error)
-      showToast("Lỗi khi xóa lịch sử", "error")
-    } finally {
-      setDeletingHistory(false)
-    }
-  }
-
-  // NEW: Cancel delete history
-  const cancelDeleteHistory = () => {
-    setShowDeleteHistoryModal(false)
-  }
-
-  // Handle reset by hiding current and creating new
   const handleReset = async (limit) => {
-    try {
-      // Step 1: Hide the current limit (set isActive = false)
-      const hideData = {
-        limitAmount: limit.limitAmount,
-        periodType: limit.periodType,
-        startDate: limit.startDate,
-        note: limit.note || "",
-        isActive: false, // Hide the current limit
-      }
+  try {
+    // Xóa limit cũ thay vì deactivate
+    await spendingLimitService.deleteSpendingLimit(limit.id)
 
-      await spendingLimitService.updateSpendingLimit(limit.id, hideData)
-
-      // Step 2: Create a new similar limit with today's date
-      const newLimitData = {
-        limitAmount: limit.limitAmount,
-        periodType: limit.periodType,
-        startDate: new Date().toISOString().split("T")[0], // Today
-        categoryId: limit.categoriesId,
-        moneySourceId: limit.moneySourcesId,
-        note: limit.note || "",
-        isActive: true,
-      }
-
-      await spendingLimitService.createSpendingLimit(newLimitData)
-
-      showToast("Reset thành công! Chu kỳ mới đã được tạo.", "success")
-
-      // Refresh data
-      await fetchData()
-    } catch (error) {
-      console.error("Error resetting spending limit:", error)
-      showToast("Lỗi khi reset mức chi tiêu", "error")
+    // Tạo limit mới với ngày hiện tại
+    const newLimitData = {
+      limitAmount: limit.limitAmount,
+      periodType: limit.periodType,
+      startDate: new Date().toISOString().split("T")[0],
+      categoryId: limit.categoriesId,
+      moneySourceId: limit.moneySourcesId,
+      note: limit.note || "",
+      isActive: true,
     }
+
+    await spendingLimitService.createSpendingLimit(newLimitData)
+
+    showToast("Reset thành công! Chu kỳ mới đã được tạo.", "success")
+    await fetchData()
+  } catch (error) {
+    console.error("Error resetting spending limit:", error)
+    showToast("Lỗi khi reset mức chi tiêu", "error")
   }
+}
 
   const handleToggleActive = async (limit) => {
     try {
       const updatedData = {
-        limitAmount: limit.limitAmount,
-        periodType: limit.periodType,
-        startDate: limit.startDate,
-        note: limit.note || "",
+        ...limit,
         isActive: !limit.active,
       }
 
       await spendingLimitService.updateSpendingLimit(limit.id, updatedData)
 
-      showToast(`${limit.active ? "Vô hiệu hóa" : "Kích hoạt"} mức chi tiêu thành công`, "success")
+      showToast(
+        `${limit.active ? "Vô hiệu hóa" : "Kích hoạt"} mức chi tiêu thành công`,
+        "success"
+      )
 
       await fetchData()
     } catch (error) {
@@ -335,20 +324,6 @@ const SpendingLimitsPage = () => {
   const handleCancelForm = () => {
     setShowForm(false)
     resetForm()
-  }
-
-  // Toggle history section
-  const handleToggleHistory = () => {
-    setShowHistory(!showHistory)
-    if (!showHistory) {
-      // Scroll to history section when opening
-      setTimeout(() => {
-        historyRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        })
-      }, 100)
-    }
   }
 
   const getCategoryName = (categoryId) => {
@@ -371,6 +346,18 @@ const SpendingLimitsPage = () => {
     return periodMap[periodType] || periodType
   }
 
+  // const calculateRemainingDays = (limit) => {
+  //   if (!limit.active) return 0
+  //   const now = new Date()
+  //   const startDate = new Date(limit.startDate)
+  //   const endDate = getEndDate(startDate, limit.periodType)
+
+  //   const diffTime = endDate - now
+  //   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  //   return diffDays > 0 ? diffDays : 0
+  // }
+
   if (loading) {
     return <div className="loading">Đang tải...</div>
   }
@@ -379,7 +366,6 @@ const SpendingLimitsPage = () => {
     <div className="spending-limits-page" ref={pageTopRef}>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={showConfirmModal}
         onClose={cancelDelete}
@@ -387,41 +373,18 @@ const SpendingLimitsPage = () => {
         title="Xác nhận xóa mức chi tiêu"
         message={
           itemToDelete
-            ? `Bạn có chắc chắn muốn xóa mức chi tiêu cho danh mục "${getCategoryName(itemToDelete.categoriesId)}"?`
+            ? `Bạn có chắc chắn muốn xóa mức chi tiêu cho danh mục "${getCategoryName(
+                itemToDelete.categoriesId
+              )}"?`
             : ""
         }
         confirmText="Xóa"
         cancelText="Hủy"
         confirmButtonClass="btn-danger"
-        warnings={["Hành động này không thể hoàn tác.", "Tất cả dữ liệu liên quan sẽ bị xóa vĩnh viễn."]}
-      />
-
-      {/* NEW: Delete History Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showDeleteHistoryModal}
-        onClose={cancelDeleteHistory}
-        onConfirm={confirmDeleteHistory}
-        title="Xác nhận xóa toàn bộ lịch sử"
-        message={`Bạn có chắc chắn muốn xóa toàn bộ ${historyLimits.length} mục lịch sử mức chi tiêu?`}
-        confirmText="Xóa tất cả"
-        cancelText="Hủy"
-        confirmButtonClass="btn-danger"
-        warnings={[
-          "Hành động này không thể hoàn tác.",
-          "Tất cả lịch sử mức chi tiêu sẽ bị xóa vĩnh viễn.",
-          "Quá trình xóa có thể mất vài giây để hoàn thành.",
-        ]}
       />
 
       <div className="page-header">
         <div className="header-actions">
-          {/* History button */}
-          <Button className={`btn ${showHistory ? "btn-secondary" : "btn-outline"}`} onClick={handleToggleHistory}>
-            <i className="fas fa-history"></i>
-            {showHistory ? "Ẩn lịch sử" : "Lịch sử"}
-            {historyLimits.length > 0 && <span className="history-count">({historyLimits.length})</span>}
-          </Button>
-
           <Button
             className="btn btn-primary"
             onClick={() => {
@@ -472,7 +435,7 @@ const SpendingLimitsPage = () => {
                   value={formData.moneySourceId}
                   onChange={handleInputChange}
                   required
-                  disabled={editingId} // FIXED: Disable money source when editing
+                  disabled={editingId}
                 >
                   <option value="">Chọn nguồn tiền</option>
                   {moneySources.map((source) => (
@@ -482,7 +445,9 @@ const SpendingLimitsPage = () => {
                   ))}
                 </select>
                 {editingId && (
-                  <small className="form-text text-muted">Không thể thay đổi nguồn tiền khi cập nhật</small>
+                  <small className="form-text text-muted">
+                    Không thể thay đổi nguồn tiền khi cập nhật
+                  </small>
                 )}
               </div>
             </div>
@@ -565,9 +530,7 @@ const SpendingLimitsPage = () => {
         </div>
       )}
 
-      {/* Main spending limits */}
       <div className="limits-container">
-        <h2 className="section-title">Mức chi tiêu hiện tại</h2>
         {spendingLimits.length === 0 ? (
           <div className="no-limits">
             <p>Chưa có mức chi tiêu nào. Hãy Thêm hạn mức.</p>
@@ -579,6 +542,7 @@ const SpendingLimitsPage = () => {
               const limitAmount = limit.limitAmount || 0
               const remaining = limitAmount - actualSpent
               const percentage = calculatePercentage(actualSpent, limitAmount)
+              // const remainingDays = calculateRemainingDays(limit)
 
               let statusClass = "normal"
               if (percentage >= 100) {
@@ -606,10 +570,13 @@ const SpendingLimitsPage = () => {
                       >
                         <i className={`fas fa-${limit.active ? "toggle-on" : "toggle-off"}`}></i>
                       </Button>
-                      <Button className="btn-icon edit" onClick={() => handleEdit(limit)} title="Chỉnh sửa">
+                      <Button
+                        className="btn-icon edit"
+                        onClick={() => handleEdit(limit)}
+                        title="Chỉnh sửa"
+                      >
                         <i className="fas fa-edit"></i>
                       </Button>
-                      {/* Reset button - only show when over limit, no confirmation */}
                       {percentage >= 100 && (
                         <Button
                           className="btn-icon reset"
@@ -619,7 +586,11 @@ const SpendingLimitsPage = () => {
                           <i className="fas fa-redo"></i>
                         </Button>
                       )}
-                      <Button className="btn-icon delete" onClick={() => handleDelete(limit)} title="Xóa">
+                      <Button
+                        className="btn-icon delete"
+                        onClick={() => handleDelete(limit)}
+                        title="Xóa"
+                      >
                         <i className="fas fa-trash"></i>
                       </Button>
                     </div>
@@ -637,37 +608,46 @@ const SpendingLimitsPage = () => {
                       </div>
                       <div className="limit-remaining">
                         <span className="label">Còn lại:</span>
-                        <span className={`value ${remaining < 0 ? "negative" : ""}`}>{formatCurrency(remaining)}</span>
+                        <span className={`value ${remaining < 0 ? "negative" : ""}`}>
+                          {formatCurrency(remaining)}
+                        </span>
                       </div>
-                    </div>
-
-                    <div className="limit-progress">
-                      <div className="progress-bar">
-                        <div
-                          className={`progress-fill ${statusClass}`}
-                          style={{ width: `${Math.min(percentage, 100)}%` }}
-                        ></div>
-                      </div>
-                      <span className={`percentage ${percentage >= 80 ? "warning" : ""}`}>{percentage}%</span>
-                    </div>
-
-                    {percentage >= 80 && percentage < 100 && (
-                      <div className="limit-warning">
-                        <i className="fas fa-exclamation-triangle"></i>
-                        <span>Cảnh báo: Đã sử dụng {percentage}% giới hạn!</span>
-                      </div>
-                    )}
-
-                    {percentage >= 100 && (
-                      <div className="limit-over">
-                        <i className="fas fa-times-circle"></i>
-                        <span>Đã vượt quá giới hạn {percentage - 100}%!</span>
-                        {/* Reset suggestion */}
-                        <div className="reset-suggestion">
-                          <i className="fas fa-lightbulb"></i>
-                          <span>Ấn nút Reset để tạo chu kỳ mới</span>
+                      {/* {limit.active && (
+                        <div className="limit-days">
+                          <span className="label">Còn lại:</span>
+                          <span className="value"> {remainingDays} ngày</span>
                         </div>
-                      </div>
+                      )} */}
+                    </div>
+
+                    {limit.active && (
+                      <>
+                        <div className="limit-progress">
+                          <div className="progress-bar">
+                            <div
+                              className={`progress-fill ${statusClass}`}
+                              style={{ width: `${Math.min(percentage, 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className={`percentage ${percentage >= 80 ? "warning" : ""}`}>
+                            {percentage}%
+                          </span>
+                        </div>
+
+                        {percentage >= 80 && percentage < 100 && (
+                          <div className="limit-warning">
+                            <i className="fas fa-exclamation-triangle"></i>
+                            <span>Cảnh báo: Đã sử dụng {percentage}% giới hạn!</span>
+                          </div>
+                        )}
+
+                        {percentage >= 100 && (
+                          <div className="limit-over">
+                            <i className="fas fa-times-circle"></i>
+                            <span>Đã vượt quá giới hạn!</span>
+                          </div>
+                        )}
+                      </>
                     )}
 
                     <div className="limit-meta">
@@ -694,102 +674,6 @@ const SpendingLimitsPage = () => {
           </div>
         )}
       </div>
-
-      {/* History section */}
-      {showHistory && (
-        <div className="history-container" ref={historyRef}>
-          <div className="history-header">
-            <h2 className="section-title">
-              <i className="fas fa-history"></i>
-              Lịch sử mức chi tiêu
-            </h2>
-            {/* NEW: Delete history button */}
-            {historyLimits.length > 0 && (
-              <Button
-                className="btn btn-danger btn-delete-history"
-                onClick={handleDeleteHistory}
-                disabled={deletingHistory}
-                title="Xóa toàn bộ lịch sử"
-              >
-                {deletingHistory ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin"></i>
-                    Đang xóa...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-trash-alt"></i>
-                    Xóa lịch sử
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-
-          {historyLimits.length === 0 ? (
-            <div className="no-history">
-              <p>Chưa có lịch sử mức chi tiêu nào.</p>
-            </div>
-          ) : (
-            <div className="history-grid">
-              {historyLimits.map((limit) => {
-                const actualSpent = limit.actualSpent || 0
-                const limitAmount = limit.limitAmount || 0
-                const percentage = calculatePercentage(actualSpent, limitAmount)
-
-                return (
-                  <div key={limit.id} className="history-card">
-                    <div className="history-header">
-                      <div className="history-title">
-                        <h4>{getCategoryName(limit.categoriesId)}</h4>
-                        <span className={`history-badge ${limit.periodType.toLowerCase()}`}>
-                          {getPeriodTypeLabel(limit.periodType)}
-                        </span>
-                        <span className="history-status">Đã kết thúc</span>
-                      </div>
-                    </div>
-
-                    <div className="history-details">
-                      <div className="history-info">
-                        <div className="history-amount">
-                          <span className="label">Giới hạn:</span>
-                          <span className="value">{formatCurrency(limitAmount)}</span>
-                        </div>
-                        <div className="history-spent">
-                          <span className="label">Đã chi:</span>
-                          <span className="value">{formatCurrency(actualSpent)}</span>
-                        </div>
-                        <div className="history-percentage">
-                          <span className="label">Tỷ lệ:</span>
-                          <span className={`value ${percentage >= 100 ? "over" : ""}`}>{percentage}%</span>
-                        </div>
-                      </div>
-
-                      <div className="history-meta">
-                        <div className="history-source">
-                          <i className="fas fa-wallet"></i>
-                          <span>{getMoneySourceName(limit.moneySourcesId)}</span>
-                        </div>
-                        <div className="history-date">
-                          <i className="fas fa-calendar-alt"></i>
-                          <span>Chu kỳ: {formatDate(limit.startDate)}</span>
-                        </div>
-                      </div>
-
-                      {limit.note && (
-                        <div className="history-note">
-                          <i className="fas fa-sticky-note"></i>
-                          <span>{limit.note}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

@@ -55,10 +55,12 @@ const transactionService = {
       if (params.toDate && params.toDate instanceof Date) {
         params.toDate = params.toDate.toISOString().split("T")[0] // YYYY-MM-DD
       }
-
-      const response = await axiosInstance.get("/transactions/filter", {
+      const userId = getCurrentUserId()
+      const response = await axiosInstance.get(`/transactions/filter/user/${userId}`, {
         params: params,
       })
+      console.log(response.data);
+      
       return response.data
     } catch (error) {
       console.error("Error getting filtered transactions:", error)
@@ -159,6 +161,8 @@ const transactionService = {
     try {
       const targetUserId = userId || getCurrentUserId()
       const response = await axiosInstance.get(`/transactions/recent-transactions/user/${targetUserId}/limit/${limit}`)
+      console.log(response.data);
+      
       return response.data
     } catch (error) {
       console.error("Error getting recent transactions:", error)

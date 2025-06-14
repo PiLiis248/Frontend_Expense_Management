@@ -135,10 +135,11 @@ const WalletPage = () => {
   // Handle delete money source
   const handleDelete = (source) => {
     // Check if money source has transactions (if this info is available)
-    if (source && source.transactionCount > 0) {
+    const transactionCount = source.transactions?.length || 0;
+    if (source && transactionCount > 0) {
       dispatch(
         setToast({
-          message: `Không thể xóa nguồn tiền này vì có ${source.transactionCount} giao dịch liên quan.`,
+          message: `Không thể xóa nguồn tiền này vì có ${transactionCount} giao dịch liên quan.`,
           type: "error",
         }),
       )
@@ -428,7 +429,7 @@ const WalletPage = () => {
                   <div className="source-stats">
                     <div className="source-transactions">
                       <i className="fas fa-exchange-alt"></i>
-                      <span>{source.transactionCount || 0} giao dịch</span>
+                      <span>{source.transactions?.length || 0} giao dịch</span>
                     </div>
                   </div>
                 </div>

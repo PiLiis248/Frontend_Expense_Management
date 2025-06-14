@@ -28,6 +28,20 @@ const categoryService = {
     }
   },
 
+  async getAllCategoriesByTransactionType(transactionTypesId) {
+    try {
+      const userId = getCurrentUserId();
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+      const response = await axiosInstance.get(`/categories/user/${userId}/transaction-type/${transactionTypesId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error getting all categories:", error);
+      throw error;
+    }
+  },
+
   // ✅ Lấy tất cả categories theo userId (admin function)
   async getAllCategoriesByUserId(userId) {
     try {

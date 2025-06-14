@@ -152,10 +152,9 @@ const TransactionsPage = () => {
       const response = await transactionService.getFilteredTransactions(filterParams)
 
       if (response) {
-        setTransactions(Array.isArray(response) ? response : [])
-        // For filtered results, we might need to handle pagination differently
-        setTotalElements(Array.isArray(response) ? response.length : 0)
-        setTotalPages(Math.ceil((Array.isArray(response) ? response.length : 0) / itemsPerPage))
+        setTransactions(response.content)
+        setTotalPages(response.totalPages)
+        setTotalElements(response.totalElements)
       }
     } catch (error) {
       console.error("Error fetching filtered transactions:", error)
@@ -166,9 +165,9 @@ const TransactionsPage = () => {
     }
   }
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (transactionTypeId) => {
     try {
-      const response = await categoryService.getAllCategories()
+      const response = await categoryService.getAllCategoriesByTransactionType(transactionTypeId)
       setCategories(response || [])
     } catch (error) {
       console.error("Error fetching categories:", error)
@@ -188,9 +187,10 @@ const TransactionsPage = () => {
     }
   }
 
+
   // Initial data fetch
   useEffect(() => {
-    fetchCategories()
+    fetchCategories(1)
     fetchMoneySources()
   }, [])
 
@@ -247,6 +247,13 @@ const TransactionsPage = () => {
       [name]: value,
     }))
     // Clear error for this field when user starts typing
+    if (name === "transactionTypeType") {
+      if (value === "EXPENSE") {
+        fetchCategories(1);
+      } else if (value === "INCOME") {
+        fetchCategories(2);
+      }
+    }
     clearFieldError(name)
   }
 

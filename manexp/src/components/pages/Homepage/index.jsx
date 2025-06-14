@@ -7,6 +7,7 @@ import PATHS from "../../../constants/path"
 import transactionService from "../../../services/transactionService"
 import spendingLimitService from "../../../services/spendingLimitService"
 import categoryService from "../../../services/categoryService"
+import walletService from "../../../services/walletService"
 
 const HomePage = () => {
   const [summary, setSummary] = useState({
@@ -17,6 +18,7 @@ const HomePage = () => {
     spendingLimits: [],
     categories: [],
   })
+  // const [someState, setSomeState] = useState(initialValue);
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -24,64 +26,63 @@ const HomePage = () => {
     const fetchData = async () => {
       try {
         setLoading(true)
-        
-        // Fetch all data concurrently
         const [
           totalIncomeResponse,
           totalExpenseResponse,
           recentTransactionsResponse,
           spendingLimitsResponse,
-          categoriesResponse
+          categoriesResponse,
+          currentBalanceResponse,
+
         ] = await Promise.all([
           transactionService.getTotalIncome("MONTH"),
           transactionService.getTotalExpense("MONTH"),
           transactionService.getRecentTransactions(null, 10),
           spendingLimitService.getAllSpendingLimits(),
-          categoryService.getAllCategories()
+          categoryService.getAllCategories(),
+          walletService.getCurrentBalance(null)
         ])
 
         // Process the data
         const totalIncome = totalIncomeResponse || 0
         const totalExpense = totalExpenseResponse || 0
-        const balance = totalIncome - totalExpense
+        const balance = currentBalanceResponse || 0
 
         // Process recent transactions
-        const recentTransactions = recentTransactionsResponse?.content?.map(transaction => ({
+       
+        const recentTransactions = recentTransactionsResponse?.map(transaction => ({
           id: transaction.id,
           amount: transaction.amount,
           description: transaction.description,
-          action: transaction.transactionTypeName === "Thu nhập" ? "income" : "expense",
+          action: transaction.transactionTypeType === "INCOME" ? "income" : "expense",
           transaction_date: transaction.transactionDate,
           category: transaction.categoriesName,
         })) || []
 
         // Process spending limits
+        console.log(spendingLimitsResponse);
+        
         const spendingLimits = spendingLimitsResponse?.map(limit => {
           // Calculate actual spent amount for this category
           // This would need to be calculated based on transactions in the current period
           // For now, we'll use a placeholder or you might need an additional API call
-          const actualSpent = calculateActualSpent(limit, recentTransactionsResponse?.content || [])
-          
+          // const actualSpent = calculateActualSpent(limit, recentTransactionsResponse?.content || [])
+
           return {
             id: limit.id,
             category: limit.categoriesName,
             limit_amount: limit.limitAmount,
-            actual_spent: actualSpent,
+            actual_spent: limit.actualSpent,
             period_type: limit.periodType,
           }
         }).filter(limit => limit.category) || [] // Filter out limits without category names
 
         // Process categories with transaction count
         const categories = categoriesResponse?.map(category => {
-          // Count transactions for this category
-          const transactionCount = recentTransactionsResponse?.content?.filter(
-            transaction => transaction.categoriesId === category.id
-          ).length || 0
-
           return {
             id: category.id,
             name: category.name,
-            transaction_count: transactionCount,
+            transaction_count: category.transactions.length || 0,
           }
         }) || []
 
@@ -101,10 +102,8 @@ const HomePage = () => {
         setLoading(false)
       }
     }
-
-    fetchData()
-  }, [])
-
+    fetchData();
+  }, []);
   // Helper function to calculate actual spent amount for a spending limit
   const calculateActualSpent = (limit, transactions) => {
     if (!limit.categoriesId || !transactions.length) return 0
@@ -173,11 +172,11 @@ const HomePage = () => {
   return (
     <div className="dashboard">
       {error && (
-        <Toast 
-          message={error} 
-          type="error" 
-          duration={5000} 
-          onClose={handleCloseToast} 
+        <Toast
+          message={error}
+          type="error"
+          duration={5000}
+          onClose={handleCloseToast}
         />
       )}
 
@@ -222,6 +221,7 @@ const HomePage = () => {
             </a>
           </div>
           <div className="transaction-list">
+            {/* {console.log(summary)} */}
             {summary.recentTransactions.length > 0 ? (
               summary.recentTransactions.map((transaction) => (
                 <div key={transaction.id} className={`transaction-item ${transaction.action}`}>

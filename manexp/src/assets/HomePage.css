@@ -315,3 +315,22 @@
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   }
 }
+.dashboard-card .transaction-list,
+.dashboard-card .limits-list,
+.dashboard-card .categories-list {
+  max-height: 500px; /* hoặc 400px tùy thiết kế bạn */
+  overflow-y: auto;
+  padding-right: 8px; /* để tránh che nội dung khi có scrollbar */
+}
+.dashboard-card .transaction-list::-webkit-scrollbar,
+.dashboard-card .limits-list::-webkit-scrollbar,
+.dashboard-card .categories-list::-webkit-scrollbar {
+  width: 2px;
+}
+
+.dashboard-card .transaction-list::-webkit-scrollbar-thumb,
+.dashboard-card .limits-list::-webkit-scrollbar-thumb,
+.dashboard-card .categories-list::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}

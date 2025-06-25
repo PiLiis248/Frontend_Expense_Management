@@ -101,7 +101,7 @@ const TransactionsPage = () => {
       // Prepare pagination and sorting parameters
       // Backend expects pageNumber starting from 0, but UI shows starting from 1
       const params = {
-        pageNumber: currentPage - 1, // Convert UI page (1-based) to backend page (0-based)
+        pageNumber: currentPage , // Convert UI page (1-based) to backend page (0-based)
         size: itemsPerPage,
         sort: `${sortField},${sortDirection}`,
       }

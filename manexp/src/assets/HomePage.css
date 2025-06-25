@@ -318,9 +318,9 @@
 .dashboard-card .transaction-list,
 .dashboard-card .limits-list,
 .dashboard-card .categories-list {
-  max-height: 500px; /* hoặc 400px tùy thiết kế bạn */
+  max-height: 500px; 
   overflow-y: auto;
-  padding-right: 8px; /* để tránh che nội dung khi có scrollbar */
+  padding-right: 8px; 
 }
 .dashboard-card .transaction-list::-webkit-scrollbar,
 .dashboard-card .limits-list::-webkit-scrollbar,

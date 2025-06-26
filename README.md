@@ -1,43 +1,32 @@
-````markdown
-## 🚀 Bắt đầu với nhánh `sub-branch`
+## 🚀 Bắt đầu với nhánh `master`
 
-Dự án này sử dụng nhánh `sub-branch` để phát triển thay vì nhánh mặc định `master`. Vui lòng làm theo các bước dưới đây để làm việc trên nhánh đúng.
+Dự án này sử dụng nhánh `master` để phát triển chính thức. Vui lòng làm theo các bước dưới đây để bắt đầu làm việc với dự án.
 
 ---
 
-### ✅ 1. Chuẩn bị thư mục và clone repository
+### ✅ 1. Clone repository
 
-(Bạn có thể) tạo một thư mục trống trên máy để chứa dự án. Sau đó mở Git Bash hoặc terminal trong thư mục đó.
-
-Nếu bạn chưa clone repo, hãy chạy:
+Mở Git Bash hoặc terminal tại thư mục bạn muốn chứa dự án, sau đó chạy:
 
 ```bash
 git clone https://github.com/Piliis248/Frontend_Expense_Management.git
 cd Frontend_Expense_Management
-````
+```
 
 ---
 
-### ✅ 2. Chuyển sang nhánh `sub-branch`
+### ✅ 2. Xác nhận đang ở đúng nhánh `master`
 
-Để chuyển sang nhánh phát triển, chạy:
-
-```bash
-git fetch origin
-git checkout sub-branch
-```
-
-Xác nhận bạn đang ở đúng nhánh bằng lệnh:
+Sau khi clone, bạn sẽ mặc định ở nhánh `master`. Kiểm tra lại bằng lệnh:
 
 ```bash
 git branch
 ```
 
-Bạn sẽ thấy dấu hoa thị (\*) bên cạnh `sub-branch` như sau:
+Bạn sẽ thấy dấu hoa thị (\*) ở trước `master` như sau:
 
 ```
-  master
-* sub-branch
+* master
 ```
 
 ---
@@ -59,7 +48,7 @@ Bạn có thể làm việc như bình thường:
   git commit -m "Nội dung commit của bạn"
   ```
 
-* Đẩy thay đổi lên nhánh `sub-branch`:
+* Đẩy thay đổi lên nhánh `master`:
 
   ```bash
   git push
@@ -69,8 +58,8 @@ Bạn có thể làm việc như bình thường:
 
 ### 📌 Lưu ý
 
-* Hãy đảm bảo mọi thay đổi của bạn đều được đẩy lên nhánh `sub-branch`.
-* Khi tạo Pull Request (PR), hãy chắc chắn chọn nhánh đích là `sub-branch`, **không phải** `master`.
+* Hãy đảm bảo mọi thay đổi của bạn đều được commit và push lên nhánh `master`.
+* Nếu bạn tạo Pull Request (PR), hãy xác nhận nhánh đích là `master`.
 * Bạn có thể kiểm tra nhánh hiện tại bất kỳ lúc nào bằng lệnh:
 
   ```bash

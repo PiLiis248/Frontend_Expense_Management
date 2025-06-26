@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import Button from "../../common/Button" // Adjust path as needed
-import InputField from "../../common/InputField" // Adjust path as needed
-import Toast from "../../common/Toast" // Adjust path as needed
-import ConfirmModal from "../../common/ConfirmModal" // Import modal component
-import IconPicker from "../../common/IconPicker" // Import icon picker component
-import categoryService from "../../../services/categoryService" // Import category service
+import Button from "../../common/Button" 
+import InputField from "../../common/InputField" 
+import Toast from "../../common/Toast" 
+import ConfirmModal from "../../common/ConfirmModal" 
+import IconPicker from "../../common/IconPicker" 
+import categoryService from "../../../services/categoryService"
 import "../../../assets/CategoryPage.css"
 
 const CategoryPage = () => {
@@ -17,7 +17,7 @@ const CategoryPage = () => {
     name: "",
     parentId: null,
     icon: "",
-    transactionTypesId: 1, // Default to expense (1) or income (2)
+    transactionTypesId: 1, 
   })
   const [editingId, setEditingId] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -66,7 +66,7 @@ const CategoryPage = () => {
     // Transport
     parking: "parking",
     fuel: "gas-pump",
-    carwash: "car-crash", // Using car-crash as alternative
+    carwash: "car-crash", 
     repair: "tools",
     taxi: "taxi",
     bus: "bus",
@@ -99,7 +99,7 @@ const CategoryPage = () => {
     doctor: "user-md",
     medicine: "pills",
     fitness: "dumbbell",
-    beauty: "spa", // Note: 'spa' might not be available in free version
+    beauty: "spa", 
     dental: "tooth",
     vision: "eye",
     
@@ -145,7 +145,7 @@ const CategoryPage = () => {
     loan: "hand-holding-usd",
     tax: "receipt",
     fee: "tags",
-    tip: "hand-holding-heart", // Alternative for tipping
+    tip: "hand-holding-heart", 
     charity: "hand-holding-heart",
     
     // Time-based
@@ -161,7 +161,7 @@ const CategoryPage = () => {
     important: "star",
     
     // Financial
-    bank: "university", // FontAwesome free alternative for bank
+    bank: "university", 
     cash: "money-bill",
     card: "credit-card",
     transfer: "exchange-alt",

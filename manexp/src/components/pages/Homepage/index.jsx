@@ -1,194 +1,70 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { useDispatch, useSelector } from 'react-redux'
 import "../../../assets/HomePage.css"
 import Toast from "../../common/Toast"
 import PATHS from "../../../constants/path"
-import transactionService from "../../../services/transactionService"
-import spendingLimitService from "../../../services/spendingLimitService"
-import categoryService from "../../../services/categoryService"
-import walletService from "../../../services/walletService"
-import UserAPI from "../../../services/userService"
+import { 
+  fetchUser, 
+  updateUserNotice, 
+  fetchDashboardData, 
+  clearError,
+  clearUserError 
+} from '../../../redux/homepage/dashboardSlice'
 
 const HomePage = () => {
-  const [summary, setSummary] = useState({
-    totalIncome: 0,
-    totalExpense: 0,
-    balance: 0,
-    recentTransactions: [],
-    spendingLimits: [],
-    categories: [],
-  })
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState(null);
-
-  const fetchUser = async () => {
-    try {
-      const response = await UserAPI.getUserById();
-      if (response.status === 200) {
-        setUser(response.data);
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  };
+  const dispatch = useDispatch()
+  
+  const { 
+    user, 
+    summary, 
+    loading, 
+    error, 
+    userError 
+  } = useSelector(state => state.dashboard)
 
   useEffect(() => {
-    fetchUser();
-  }, []);
+    dispatch(fetchUser())
+  }, [dispatch])
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) return
 
-    const confirmKey = `hasConfirmedNotice-${user.id}`;
-    const hasConfirmed = sessionStorage.getItem(confirmKey);
+    const confirmKey = `hasConfirmedNotice-${user.id}`
+    const hasConfirmed = sessionStorage.getItem(confirmKey)
 
     if (user.notice === false && hasConfirmed !== "true") {
-      const result = confirm("Bạn có muốn nhận báo cáo thu chi hằng ngày về mail không?");
+      const result = confirm("Bạn có muốn nhận báo cáo thu chi hằng ngày về mail không?")
       if (result) {
-        UserAPI.updateNotice(user.id, true);
+        dispatch(updateUserNotice({ userId: user.id, notice: true }))
       }
-      sessionStorage.setItem(confirmKey, "true");
+      sessionStorage.setItem(confirmKey, "true")
     }
-  }, [user]);
-
+  }, [user, dispatch])
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        const [
-          totalIncomeResponse,
-          totalExpenseResponse,
-          recentTransactionsResponse,
-          spendingLimitsResponse,
-          categoriesResponse,
-          currentBalanceResponse,
+    dispatch(fetchDashboardData())
+  }, [dispatch])
 
-        ] = await Promise.all([
-          transactionService.getTotalIncome("MONTH"),
-          transactionService.getTotalExpense("MONTH"),
-          transactionService.getRecentTransactions(null, 10),
-          spendingLimitService.getAllSpendingLimits(),
-          categoryService.getAllCategories(),
-          walletService.getCurrentBalance(null)
-        ])
 
-        // Process the data
-        const totalIncome = totalIncomeResponse || 0
-        const totalExpense = totalExpenseResponse || 0
-        const balance = currentBalanceResponse || 0
-
-        // Process recent transactions
-
-        const recentTransactions = recentTransactionsResponse?.map(transaction => ({
-          id: transaction.id,
-          amount: transaction.amount,
-          description: transaction.description,
-          action: transaction.transactionTypeType === "INCOME" ? "income" : "expense",
-          transaction_date: transaction.transactionDate,
-          category: transaction.categoriesName,
-        })) || []
-
-        const spendingLimits = spendingLimitsResponse?.map(limit => {
-          // Calculate actual spent amount for this category
-          // This would need to be calculated based on transactions in the current period
-          // For now, we'll use a placeholder or you might need an additional API call
-          // const actualSpent = calculateActualSpent(limit, recentTransactionsResponse?.content || [])
-
-          return {
-            id: limit.id,
-            category: limit.categoriesName,
-            limit_amount: limit.limitAmount,
-            actual_spent: limit.actualSpent,
-            period_type: limit.periodType,
-          }
-        }).filter(limit => limit.category) || [] // Filter out limits without category names
-
-        // Process categories with transaction count
-        const categories = categoriesResponse?.map(category => {
-          return {
-            id: category.id,
-            name: category.name,
-            transaction_count: category.transactions.length || 0,
-          }
-        }) || []
-
-        setSummary({
-          totalIncome,
-          totalExpense,
-          balance,
-          recentTransactions,
-          spendingLimits,
-          categories,
-        })
-        setError(null)
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err)
-        setError("Không thể tải dữ liệu tổng quan. Vui lòng thử lại sau.")
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData();
-  }, []);
-  // Helper function to calculate actual spent amount for a spending limit
-  const calculateActualSpent = (limit, transactions) => {
-    if (!limit.categoriesId || !transactions.length) return 0
-
-    // Filter transactions for this category and period
-    const now = new Date()
-    let startDate = new Date()
-
-    // Calculate start date based on period type
-    switch (limit.periodType?.toLowerCase()) {
-      case 'daily':
-        startDate.setHours(0, 0, 0, 0)
-        break
-      case 'weekly':
-        startDate.setDate(now.getDate() - 7)
-        break
-      case 'monthly':
-      default:
-        startDate.setDate(1)
-        startDate.setHours(0, 0, 0, 0)
-        break
-    }
-
-    // Sum up expenses for this category in the current period
-    const actualSpent = transactions
-      .filter(transaction => {
-        const transactionDate = new Date(transaction.transactionDate)
-        return (
-          transaction.categoriesId === limit.categoriesId &&
-          transaction.transactionTypeName !== "Thu nhập" &&
-          transactionDate >= startDate &&
-          transactionDate <= now
-        )
-      })
-      .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
-
-    return actualSpent
-  }
-
-  // Close toast handler
   const handleCloseToast = () => {
-    setError(null)
+    dispatch(clearError())
   }
 
-  // Format currency
+  const handleCloseUserToast = () => {
+    dispatch(clearUserError())
+  }
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
   }
 
-  // Format date
   const formatDate = (dateString) => {
     const date = new Date(dateString)
     return new Intl.DateTimeFormat("vi-VN").format(date)
   }
 
-  // Calculate percentage for spending limits
   const calculatePercentage = (actual, limit) => {
     if (!limit || limit === 0) return 0
     return Math.round((actual / limit) * 100)
@@ -206,6 +82,15 @@ const HomePage = () => {
           type="error"
           duration={5000}
           onClose={handleCloseToast}
+        />
+      )}
+
+      {userError && (
+        <Toast
+          message={userError}
+          type="error"
+          duration={5000}
+          onClose={handleCloseUserToast}
         />
       )}
 
@@ -250,7 +135,6 @@ const HomePage = () => {
             </a>
           </div>
           <div className="transaction-list">
-            {/* {console.log(summary)} */}
             {summary.recentTransactions.length > 0 ? (
               summary.recentTransactions.map((transaction) => (
                 <div key={transaction.id} className={`transaction-item ${transaction.action}`}>

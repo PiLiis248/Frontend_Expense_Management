@@ -1,147 +1,75 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useRef } from "react"
+import { useSelector, useDispatch } from "react-redux"
 import Button from "../../common/Button"
 import InputField from "../../common/InputField"
 import Toast from "../../common/Toast"
 import ConfirmModal from "../../common/ConfirmModal"
-import spendingLimitService from "../../../services/spendingLimitService"
-import categoryService from "../../../services/categoryService"
-import moneySourceService from "../../../services/walletService"
 import { useWarning } from "../../../constants/WarningContext"
+import {
+  fetchSpendingLimits,
+  fetchCategories,
+  fetchMoneySources,
+  createSpendingLimit,
+  updateSpendingLimit,
+  deleteSpendingLimit,
+  resetSpendingLimit,
+  toggleSpendingLimitStatus,
+  setShowForm,
+  setFormData,
+  setEditingId,
+  resetForm,
+  setShowConfirmModal,
+  setItemToDelete,
+  setToast,
+  clearToast,
+  calculateWarningCount,
+  selectSpendingLimits,
+  selectCategories,
+  selectMoneySources,
+  selectLoading,
+  selectShowForm,
+  selectEditingId,
+  selectFormData,
+  selectShowConfirmModal,
+  selectItemToDelete,
+  selectToast,
+  selectWarningCount,
+} from "../../../redux/spendingLimit/spendingLimitSlice"
 import "../../../assets/SpendingLimitsPage.css"
 
 const SpendingLimitsPage = () => {
+  const dispatch = useDispatch()
   const { setWarningCount } = useWarning()
-  const [spendingLimits, setSpendingLimits] = useState([])
-  const [categories, setCategories] = useState([])
-  const [moneySources, setMoneySources] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [formData, setFormData] = useState({
-    limitAmount: "",
-    periodType: "MONTHLY",
-    startDate: new Date().toISOString().split("T")[0],
-    categoryId: "",
-    moneySourceId: "",
-    note: "",
-    isActive: true,
-  })
-  const [editingId, setEditingId] = useState(null)
-  const [toast, setToast] = useState(null)
-  const [showConfirmModal, setShowConfirmModal] = useState(false)
-  const [itemToDelete, setItemToDelete] = useState(null)
-
   const pageTopRef = useRef(null)
 
+  const spendingLimits = useSelector(selectSpendingLimits)
+  const categories = useSelector(selectCategories)
+  const moneySources = useSelector(selectMoneySources)
+  const loading = useSelector(selectLoading)
+  const showForm = useSelector(selectShowForm)
+  const editingId = useSelector(selectEditingId)
+  const formData = useSelector(selectFormData)
+  const showConfirmModal = useSelector(selectShowConfirmModal)
+  const itemToDelete = useSelector(selectItemToDelete)
+  const toast = useSelector(selectToast)
+  const warningCount = useSelector(selectWarningCount)
+
   useEffect(() => {
+    const fetchData = async () => {
+      await Promise.all([dispatch(fetchSpendingLimits()), dispatch(fetchCategories()), dispatch(fetchMoneySources())])
+    }
     fetchData()
-  }, [])
+  }, [dispatch])
 
   useEffect(() => {
-    const warningCount = calculateWarningCount()
     setWarningCount(warningCount)
-  }, [spendingLimits, setWarningCount])
+  }, [warningCount, setWarningCount])
 
-  const calculateWarningCount = () => {
-    return spendingLimits
-      .filter((limit) => limit.active)
-      .filter((limit) => {
-        const actualSpent = limit.actualSpent || 0
-        const limitAmount = limit.limitAmount || 0
-        const percentage = limitAmount === 0 ? 0 : Math.round((actualSpent / limitAmount) * 100)
-        return percentage >= 80
-      }).length
-  }
-
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-
-      const [limitsResponse, categoriesResponse, moneySourcesResponse] = await Promise.all([
-        spendingLimitService.getAllSpendingLimits(),
-        categoryService.getAllCategories(),
-        moneySourceService.getAllMoneySources(),
-      ])
-
-      // Process limits - check if any active limits need to be reset based on their period
-      const processedLimits = await Promise.all(
-        (limitsResponse || []).map(async (limit) => {
-          if (limit.active && shouldResetLimit(limit)) {
-            // Auto-reset the limit
-            await resetLimit(limit)
-            return null // This limit will be replaced by the new one
-          }
-          return limit
-        })
-      )
-
-      // Filter out null values (limits that were reset)
-      const validLimits = processedLimits.filter((limit) => limit !== null)
-
-      setSpendingLimits(validLimits)
-      setCategories(categoriesResponse || [])
-      setMoneySources(moneySourcesResponse || [])
-    } catch (error) {
-      console.error("Error fetching data:", error)
-      showToast("Lỗi khi tải dữ liệu", "error")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const shouldResetLimit = (limit) => {
-    if (!limit.active) return false
-    const now = new Date()
-    const startDate = new Date(limit.startDate)
-    const endDate = getEndDate(startDate, limit.periodType)
-    return now >= endDate
-  }
-
-  const getEndDate = (startDate, periodType) => {
-    const endDate = new Date(startDate)
-
-    switch (periodType) {
-      case "DAILY":
-        endDate.setDate(endDate.getDate() + 1)
-        break
-      case "WEEKLY":
-        endDate.setDate(endDate.getDate() + 7)
-        break
-      case "MONTHLY":
-        endDate.setMonth(endDate.getMonth() + 1)
-        break
-      case "YEARLY":
-        endDate.setFullYear(endDate.getFullYear() + 1)
-        break
-      default:
-        endDate.setMonth(endDate.getMonth() + 1)
-    }
-
-    return endDate
-  }
-
-  const resetLimit = async (limit) => {
-  try {
-    // Xóa limit cũ thay vì deactivate
-    await spendingLimitService.deleteSpendingLimit(limit.id)
-
-    // Tạo limit mới với ngày hiện tại
-    const newLimitData = {
-      limitAmount: limit.limitAmount,
-      periodType: limit.periodType,
-      startDate: new Date().toISOString().split("T")[0],
-      categoryId: limit.categoriesId,
-      moneySourceId: limit.moneySourcesId,
-      note: limit.note || "",
-      isActive: true,
-    }
-
-    await spendingLimitService.createSpendingLimit(newLimitData)
-  } catch (error) {
-    console.error("Error resetting limit:", error)
-  }
-}
+  useEffect(() => {
+    dispatch(calculateWarningCount())
+  }, [spendingLimits, dispatch])
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
@@ -155,175 +83,6 @@ const SpendingLimitsPage = () => {
   const calculatePercentage = (actual, limit) => {
     if (limit === 0) return 0
     return Math.round((actual / limit) * 100)
-  }
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }))
-  }
-
-  const showToast = (message, type = "success") => {
-    setToast({ message, type })
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    if (!formData.categoryId || !formData.moneySourceId || !formData.limitAmount) {
-      showToast("Vui lòng điền đầy đủ thông tin bắt buộc", "error")
-      return
-    }
-
-    try {
-      const requestData = {
-        limitAmount: Number.parseFloat(formData.limitAmount),
-        periodType: formData.periodType,
-        startDate: formData.startDate,
-        categoryId: Number.parseInt(formData.categoryId),
-        moneySourceId: Number.parseInt(formData.moneySourceId),
-        note: formData.note,
-        isActive: formData.isActive,
-      }
-
-      if (editingId) {
-        // For update, don't include moneySourceId and categoryId
-        // eslint-disable-next-line no-unused-vars
-        const { moneySourceId, categoryId, ...updateData } = requestData
-        await spendingLimitService.updateSpendingLimit(editingId, updateData)
-        showToast("Cập nhật mức chi tiêu thành công", "success")
-      } else {
-        await spendingLimitService.createSpendingLimit(requestData)
-        showToast("Thêm mức chi tiêu thành công", "success")
-      }
-
-      await fetchData()
-      resetForm()
-      setShowForm(false)
-    } catch (error) {
-      console.error("Error saving spending limit:", error)
-      showToast(
-        editingId ? "Lỗi khi cập nhật mức chi tiêu" : "Lỗi khi thêm mức chi tiêu",
-        "error"
-      )
-    }
-  }
-
-  const resetForm = () => {
-    setFormData({
-      limitAmount: "",
-      periodType: "MONTHLY",
-      startDate: new Date().toISOString().split("T")[0],
-      categoryId: "",
-      moneySourceId: "",
-      note: "",
-      isActive: true,
-    })
-    setEditingId(null)
-  }
-
-  const handleEdit = (limit) => {
-    const formattedDate = limit.startDate
-      ? limit.startDate.split("T")[0]
-      : new Date().toISOString().split("T")[0]
-
-    setFormData({
-      limitAmount: limit.limitAmount.toString(),
-      periodType: limit.periodType,
-      startDate: formattedDate,
-      categoryId: limit.categoriesId.toString(),
-      moneySourceId: limit.moneySourcesId.toString(),
-      note: limit.note || "",
-      isActive: limit.active,
-    })
-    setEditingId(limit.id)
-    setShowForm(true)
-
-    setTimeout(() => {
-      pageTopRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      })
-    }, 0)
-  }
-
-  const handleDelete = (limit) => {
-    setItemToDelete(limit)
-    setShowConfirmModal(true)
-  }
-
-  const confirmDelete = async () => {
-    if (itemToDelete) {
-      try {
-        await spendingLimitService.deleteSpendingLimit(itemToDelete.id)
-        showToast("Xóa mức chi tiêu thành công", "success")
-        await fetchData()
-      } catch (error) {
-        console.error("Error deleting spending limit:", error)
-        showToast("Lỗi khi xóa mức chi tiêu", "error")
-      }
-    }
-    setShowConfirmModal(false)
-    setItemToDelete(null)
-  }
-
-  const cancelDelete = () => {
-    setShowConfirmModal(false)
-    setItemToDelete(null)
-  }
-
-  const handleReset = async (limit) => {
-  try {
-    // Xóa limit cũ thay vì deactivate
-    await spendingLimitService.deleteSpendingLimit(limit.id)
-
-    // Tạo limit mới với ngày hiện tại
-    const newLimitData = {
-      limitAmount: limit.limitAmount,
-      periodType: limit.periodType,
-      startDate: new Date().toISOString().split("T")[0],
-      categoryId: limit.categoriesId,
-      moneySourceId: limit.moneySourcesId,
-      note: limit.note || "",
-      isActive: true,
-    }
-
-    await spendingLimitService.createSpendingLimit(newLimitData)
-
-    showToast("Reset thành công! Chu kỳ mới đã được tạo.", "success")
-    await fetchData()
-  } catch (error) {
-    console.error("Error resetting spending limit:", error)
-    showToast("Lỗi khi reset mức chi tiêu", "error")
-  }
-}
-
-  const handleToggleActive = async (limit) => {
-    try {
-      const updatedData = {
-        ...limit,
-        isActive: !limit.active,
-      }
-
-      await spendingLimitService.updateSpendingLimit(limit.id, updatedData)
-
-      showToast(
-        `${limit.active ? "Vô hiệu hóa" : "Kích hoạt"} mức chi tiêu thành công`,
-        "success"
-      )
-
-      await fetchData()
-    } catch (error) {
-      console.error("Error toggling spending limit status:", error)
-      showToast("Lỗi khi thay đổi trạng thái mức chi tiêu", "error")
-    }
-  }
-
-  const handleCancelForm = () => {
-    setShowForm(false)
-    resetForm()
   }
 
   const getCategoryName = (categoryId) => {
@@ -346,17 +105,106 @@ const SpendingLimitsPage = () => {
     return periodMap[periodType] || periodType
   }
 
-  // const calculateRemainingDays = (limit) => {
-  //   if (!limit.active) return 0
-  //   const now = new Date()
-  //   const startDate = new Date(limit.startDate)
-  //   const endDate = getEndDate(startDate, limit.periodType)
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target
+    dispatch(setFormData({ [name]: type === "checkbox" ? checked : value }))
+  }
 
-  //   const diffTime = endDate - now
-  //   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!formData.categoryId || !formData.moneySourceId || !formData.limitAmount) {
+      dispatch(setToast({ message: "Vui lòng điền đầy đủ thông tin bắt buộc", type: "error" }))
+      return
+    }
 
-  //   return diffDays > 0 ? diffDays : 0
-  // }
+    const requestData = {
+      limitAmount: Number.parseFloat(formData.limitAmount),
+      periodType: formData.periodType,
+      startDate: formData.startDate,
+      categoryId: Number.parseInt(formData.categoryId),
+      moneySourceId: Number.parseInt(formData.moneySourceId),
+      note: formData.note,
+      isActive: formData.isActive,
+    }
+
+    if (editingId) {
+      // eslint-disable-next-line no-unused-vars
+      const { moneySourceId, categoryId, ...updateData } = requestData
+      await dispatch(updateSpendingLimit({ id: editingId, updateData }))
+    } else {
+      await dispatch(createSpendingLimit(requestData))
+    }
+
+    dispatch(fetchSpendingLimits())
+  }
+
+  const handleEdit = (limit) => {
+    const formattedDate = limit.startDate ? limit.startDate.split("T")[0] : new Date().toISOString().split("T")[0]
+
+    dispatch(
+      setFormData({
+        limitAmount: limit.limitAmount.toString(),
+        periodType: limit.periodType,
+        startDate: formattedDate,
+        categoryId: limit.categoriesId.toString(),
+        moneySourceId: limit.moneySourcesId.toString(),
+        note: limit.note || "",
+        isActive: limit.active,
+      }),
+    )
+    dispatch(setEditingId(limit.id))
+    dispatch(setShowForm(true))
+
+    setTimeout(() => {
+      pageTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      })
+    }, 0)
+  }
+
+  const handleDelete = (limit) => {
+    dispatch(setItemToDelete(limit))
+    dispatch(setShowConfirmModal(true))
+  }
+
+  const confirmDelete = async () => {
+    if (itemToDelete) {
+      await dispatch(deleteSpendingLimit(itemToDelete.id))
+      dispatch(fetchSpendingLimits()) 
+    }
+    dispatch(setShowConfirmModal(false))
+    dispatch(setItemToDelete(null))
+  }
+
+  const cancelDelete = () => {
+    dispatch(setShowConfirmModal(false))
+    dispatch(setItemToDelete(null))
+  }
+
+  const handleReset = async (limit) => {
+    await dispatch(resetSpendingLimit(limit))
+    dispatch(fetchSpendingLimits()) 
+  }
+
+  const handleToggleActive = async (limit) => {
+    await dispatch(toggleSpendingLimitStatus(limit))
+    dispatch(fetchSpendingLimits()) 
+  }
+
+  const handleCancelForm = () => {
+    dispatch(setShowForm(false))
+    dispatch(resetForm())
+  }
+
+  const handleShowFormClick = () => {
+    if (showForm && !editingId) {
+      handleCancelForm()
+    } else {
+      dispatch(resetForm())
+      dispatch(setShowForm(true))
+    }
+  }
 
   if (loading) {
     return <div className="loading">Đang tải...</div>
@@ -364,7 +212,7 @@ const SpendingLimitsPage = () => {
 
   return (
     <div className="spending-limits-page" ref={pageTopRef}>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => dispatch(clearToast())} />}
 
       <ConfirmModal
         isOpen={showConfirmModal}
@@ -373,9 +221,7 @@ const SpendingLimitsPage = () => {
         title="Xác nhận xóa mức chi tiêu"
         message={
           itemToDelete
-            ? `Bạn có chắc chắn muốn xóa mức chi tiêu cho danh mục "${getCategoryName(
-                itemToDelete.categoriesId
-              )}"?`
+            ? `Bạn có chắc chắn muốn xóa mức chi tiêu cho danh mục "${getCategoryName(itemToDelete.categoriesId)}"?`
             : ""
         }
         confirmText="Xóa"
@@ -385,17 +231,7 @@ const SpendingLimitsPage = () => {
 
       <div className="page-header">
         <div className="header-actions">
-          <Button
-            className="btn btn-primary"
-            onClick={() => {
-              if (showForm && !editingId) {
-                handleCancelForm()
-              } else {
-                resetForm()
-                setShowForm(true)
-              }
-            }}
-          >
+          <Button className="btn btn-primary" onClick={handleShowFormClick}>
             {showForm && !editingId ? "Hủy" : "Thêm hạn mức"}
           </Button>
         </div>
@@ -405,7 +241,6 @@ const SpendingLimitsPage = () => {
         <div className="limit-form-container">
           <form className="limit-form" onSubmit={handleSubmit}>
             <h2>{editingId ? "Cập nhật mức chi tiêu" : "Thêm hạn mức"}</h2>
-
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="categoryId">Danh mục</label>
@@ -425,7 +260,6 @@ const SpendingLimitsPage = () => {
                   ))}
                 </select>
               </div>
-
               <div className="form-group">
                 <label htmlFor="moneySourceId">Nguồn tiền</label>
                 <select
@@ -445,13 +279,10 @@ const SpendingLimitsPage = () => {
                   ))}
                 </select>
                 {editingId && (
-                  <small className="form-text text-muted">
-                    Không thể thay đổi nguồn tiền khi cập nhật
-                  </small>
+                  <small className="form-text text-muted">Không thể thay đổi nguồn tiền khi cập nhật</small>
                 )}
               </div>
             </div>
-
             <div className="form-row">
               <div className="form-group">
                 <InputField
@@ -464,7 +295,6 @@ const SpendingLimitsPage = () => {
                   className="form-control"
                 />
               </div>
-
               <div className="form-group">
                 <label htmlFor="periodType">Chu kỳ</label>
                 <select
@@ -482,7 +312,6 @@ const SpendingLimitsPage = () => {
                 </select>
               </div>
             </div>
-
             <div className="form-row">
               <div className="form-group">
                 <InputField
@@ -494,7 +323,6 @@ const SpendingLimitsPage = () => {
                   className="form-control"
                 />
               </div>
-
               <div className="form-group">
                 <InputField
                   label="Ghi chú"
@@ -507,7 +335,6 @@ const SpendingLimitsPage = () => {
                 />
               </div>
             </div>
-
             <div className="form-group checkbox-group">
               <InputField
                 label="Kích hoạt"
@@ -517,7 +344,6 @@ const SpendingLimitsPage = () => {
                 onChange={handleInputChange}
               />
             </div>
-
             <div className="form-actions">
               <Button type="submit" className="btn btn-primary">
                 {editingId ? "Cập nhật" : "Lưu mức chi tiêu"}
@@ -542,7 +368,6 @@ const SpendingLimitsPage = () => {
               const limitAmount = limit.limitAmount || 0
               const remaining = limitAmount - actualSpent
               const percentage = calculatePercentage(actualSpent, limitAmount)
-              // const remainingDays = calculateRemainingDays(limit)
 
               let statusClass = "normal"
               if (percentage >= 100) {
@@ -570,11 +395,7 @@ const SpendingLimitsPage = () => {
                       >
                         <i className={`fas fa-${limit.active ? "toggle-on" : "toggle-off"}`}></i>
                       </Button>
-                      <Button
-                        className="btn-icon edit"
-                        onClick={() => handleEdit(limit)}
-                        title="Chỉnh sửa"
-                      >
+                      <Button className="btn-icon edit" onClick={() => handleEdit(limit)} title="Chỉnh sửa">
                         <i className="fas fa-edit"></i>
                       </Button>
                       {percentage >= 100 && (
@@ -586,16 +407,11 @@ const SpendingLimitsPage = () => {
                           <i className="fas fa-redo"></i>
                         </Button>
                       )}
-                      <Button
-                        className="btn-icon delete"
-                        onClick={() => handleDelete(limit)}
-                        title="Xóa"
-                      >
+                      <Button className="btn-icon delete" onClick={() => handleDelete(limit)} title="Xóa">
                         <i className="fas fa-trash"></i>
                       </Button>
                     </div>
                   </div>
-
                   <div className="limit-details">
                     <div className="limit-info">
                       <div className="limit-amount">
@@ -608,18 +424,9 @@ const SpendingLimitsPage = () => {
                       </div>
                       <div className="limit-remaining">
                         <span className="label">Còn lại:</span>
-                        <span className={`value ${remaining < 0 ? "negative" : ""}`}>
-                          {formatCurrency(remaining)}
-                        </span>
+                        <span className={`value ${remaining < 0 ? "negative" : ""}`}>{formatCurrency(remaining)}</span>
                       </div>
-                      {/* {limit.active && (
-                        <div className="limit-days">
-                          <span className="label">Còn lại:</span>
-                          <span className="value"> {remainingDays} ngày</span>
-                        </div>
-                      )} */}
                     </div>
-
                     {limit.active && (
                       <>
                         <div className="limit-progress">
@@ -629,18 +436,14 @@ const SpendingLimitsPage = () => {
                               style={{ width: `${Math.min(percentage, 100)}%` }}
                             ></div>
                           </div>
-                          <span className={`percentage ${percentage >= 80 ? "warning" : ""}`}>
-                            {percentage}%
-                          </span>
+                          <span className={`percentage ${percentage >= 80 ? "warning" : ""}`}>{percentage}%</span>
                         </div>
-
                         {percentage >= 80 && percentage < 100 && (
                           <div className="limit-warning">
                             <i className="fas fa-exclamation-triangle"></i>
                             <span>Cảnh báo: Đã sử dụng {percentage}% giới hạn!</span>
                           </div>
                         )}
-
                         {percentage >= 100 && (
                           <div className="limit-over">
                             <i className="fas fa-times-circle"></i>
@@ -649,7 +452,6 @@ const SpendingLimitsPage = () => {
                         )}
                       </>
                     )}
-
                     <div className="limit-meta">
                       <div className="limit-source">
                         <i className="fas fa-wallet"></i>
@@ -660,7 +462,6 @@ const SpendingLimitsPage = () => {
                         <span>Bắt đầu: {formatDate(limit.startDate)}</span>
                       </div>
                     </div>
-
                     {limit.note && (
                       <div className="limit-note">
                         <i className="fas fa-sticky-note"></i>

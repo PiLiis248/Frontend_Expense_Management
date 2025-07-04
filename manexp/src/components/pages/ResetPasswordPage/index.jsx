@@ -10,7 +10,6 @@ import authService from "../../../services/authService";
 import "../../../assets/AuthPage.css";
 import PATHS from "../../../constants/path";
 
-// Schema validation for reset password form
 const resetPasswordSchema = Yup.object({
   newPassword: Yup.string()
     .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
@@ -22,22 +21,19 @@ const resetPasswordSchema = Yup.object({
 });
 
 const ResetPasswordPage = () => {
-  // Form states
   const [formData, setFormData] = useState({
     newPassword: "",
     confirmPassword: "",
   });
 
-  // Validation states
   const [errors, setErrors] = useState({
     newPassword: "",
     confirmPassword: "",
   });
 
-  // UI states
   const [loading, setLoading] = useState(false);
-  const [validatingToken, setValidatingToken] = useState(true); // Thêm state để track việc validate token
-  const [tokenValid, setTokenValid] = useState(false); // State để track token có hợp lệ không
+  const [validatingToken, setValidatingToken] = useState(true); 
+  const [tokenValid, setTokenValid] = useState(false); 
   const [toast, setToast] = useState({ visible: false, message: "", type: "" });
   const [resetSuccess, setResetSuccess] = useState(false);
   const [countdown, setCountdown] = useState(3);
@@ -45,10 +41,8 @@ const ResetPasswordPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Extract token from URL query params
   const token = new URLSearchParams(location.search).get("token");
 
-  // Handle countdown for redirect after success
   useEffect(() => {
     let timer;
     if (resetSuccess && countdown > 0) {
@@ -59,7 +53,6 @@ const ResetPasswordPage = () => {
     return () => clearTimeout(timer);
   }, [resetSuccess, countdown, navigate]);
 
-  // Validate token when component mounts
   useEffect(() => {
     const validateToken = async () => {
       if (!token) {
@@ -79,11 +72,9 @@ const ResetPasswordPage = () => {
         setValidatingToken(true);
         await authService.validateResetToken(token);
         
-        // Nếu validate thành công
         setTokenValid(true);
         setValidatingToken(false);
       } catch (error) {
-        // Nếu validate thất bại (token hết hạn hoặc không tồn tại)
         setToast({
           visible: true,
           message: error.response?.data?.message || "Token đã hết hạn hoặc không hợp lệ",
@@ -101,7 +92,6 @@ const ResetPasswordPage = () => {
     validateToken();
   }, [token, navigate]);
 
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     
@@ -110,7 +100,6 @@ const ResetPasswordPage = () => {
       [name]: value,
     }));
     
-    // Clear error when user types
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -119,7 +108,6 @@ const ResetPasswordPage = () => {
     }
   };
 
-  // Validate form data with Yup
   const validateForm = async () => {
     try {
       await resetPasswordSchema.validate(formData, { abortEarly: false });
@@ -134,11 +122,9 @@ const ResetPasswordPage = () => {
     }
   };
 
-  // Handle reset password form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate form before submitting
     const isValid = await validateForm();
     if (!isValid || !token || !tokenValid) return;
     
@@ -164,12 +150,10 @@ const ResetPasswordPage = () => {
     }
   };
 
-  // Close toast notification
   const closeToast = () => {
     setToast({ ...toast, visible: false });
   };
 
-  // Render loading state while validating token
   if (validatingToken) {
     return (
       <div className="reset-password-container">
@@ -186,7 +170,6 @@ const ResetPasswordPage = () => {
     );
   }
 
-  // Don't render form if token is invalid
   if (!tokenValid) {
     return (
       <div className="reset-password-container">

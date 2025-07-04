@@ -12,17 +12,14 @@ import {
   loadRememberedCredentials 
 } from "../redux/authen/authSlice";
 
-// Tạo Auth Context
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
-  // Get state from Redux store
   const { user, isAuthenticated, isLoading } = useSelector((state) => state.auth);
 
-  // Kiểm tra đăng nhập khi component mount
   useEffect(() => {
     const initializeAuth = async () => {
       dispatch(setLoading(true));
@@ -30,22 +27,18 @@ export const AuthProvider = ({ children }) => {
       const storedUser = tokenMethod.get();
       
       if (storedUser && storedUser.token && storedUser.user) {
-        // Nếu có token hợp lệ, set user
         dispatch(setUser({
           user: storedUser.user,
           isAuthenticated: true
         }));
         
-        // Nếu đang ở trang login thì chuyển đến homepage
         if (window.location.pathname === PATHS.login) {
           navigate(PATHS.homepage);
         }
       } else {
-        // Nếu không có token, kiểm tra remembered credentials
         try {
           const result = await dispatch(loadRememberedCredentials()).unwrap();
           if (result && result.phone && result.password) {
-            // Tự động đăng nhập với credentials đã lưu
             await dispatch(loginUser({
               phone: result.phone,
               password: result.password,
@@ -67,7 +60,6 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, [navigate, dispatch]);
 
-  // ✅ Đăng nhập
   const login = async (phoneNumber, password, rememberMe, silent = false) => {
     try {
       const result = await dispatch(loginUser({
@@ -77,12 +69,10 @@ export const AuthProvider = ({ children }) => {
         silent
       })).unwrap();
 
-      // Navigate đến homepage (cả silent và manual login)
       navigate(PATHS.homepage);
       
       return result;
     } catch (error) {
-      // Nếu auto login thất bại, xóa remembered credentials
       if (silent) {
         localStorage.removeItem("rememberedLogin");
       }
@@ -90,7 +80,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✅ Đăng xuất
   const logout = () => {
     tokenMethod.remove();
     localStorage.removeItem("rememberedLogin");
@@ -99,7 +88,6 @@ export const AuthProvider = ({ children }) => {
     navigate(PATHS.login);
   };
 
-  // ✅ Đăng ký
   const register = async (payload) => {
     // eslint-disable-next-line no-useless-catch
     try {
@@ -110,30 +98,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✅ CẬP NHẬT USER INFO - Method mới
   const updateUser = (updatedUserData) => {
     try {
-      // 1. Lấy token data hiện tại
       const currentTokenData = tokenMethod.get();
       
       if (currentTokenData && currentTokenData.user) {
-        // 2. Merge user data mới với data cũ
         const updatedUser = {
           ...currentTokenData.user,
           ...updatedUserData
         };
 
-        // 3. Tạo token data mới
         const newTokenData = {
           ...currentTokenData,
           user: updatedUser
         };
 
-        // 4. Lưu vào storage (giữ nguyên remember preference)
         const hasLocalToken = localStorage.getItem("authData");
         tokenMethod.set(newTokenData, !!hasLocalToken);
 
-        // 5. Cập nhật Redux store
         dispatch(setUser({
           user: updatedUser,
           isAuthenticated: true
@@ -157,7 +139,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     register,
-    updateUser, // ← Method mới
+    updateUser, 
   };
 
   return (
@@ -167,7 +149,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// ✅ Custom hook để dùng Auth
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

@@ -28,7 +28,6 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { validateLoginForm, validateEmail } = useValidation();
 
-  // Get state from Redux store
   const {
     formData,
     loginLoading,
@@ -42,13 +41,11 @@ const LoginPage = () => {
     isAuthenticated,
   } = useSelector((state) => state.auth);
 
-  // Load remembered credentials on component mount
   useEffect(() => {
     dispatch(resetFormData());
     dispatch(loadRememberedCredentials());
   }, [dispatch]);
 
-  // Handle countdown timer for reset password
   useEffect(() => {
     let timer;
     if (resetCountdown > 0) {
@@ -57,7 +54,6 @@ const LoginPage = () => {
     return () => clearTimeout(timer);
   }, [resetCountdown, dispatch]);
 
-  // Navigate to homepage when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       const timer = setTimeout(() => {
@@ -67,7 +63,6 @@ const LoginPage = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     const newValue = type === "checkbox" ? checked : value;
@@ -75,15 +70,12 @@ const LoginPage = () => {
     dispatch(updateFormData({ name, value: newValue }));
   };
 
-  // Handle login form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate form before submitting
     const isValid = await validateLoginForm(formData);
     if (!isValid) return;
     
-    // Dispatch login action
     dispatch(loginUser({
       phone: formData.phone,
       password: formData.password,
@@ -91,40 +83,32 @@ const LoginPage = () => {
     }));
   };
 
-  // Handle reset password request
   const handleResetPassword = async (e) => {
     e.preventDefault();
     
-    // Validate email before submitting
     const isEmailValid = await validateEmail(resetEmail);
     if (!isEmailValid) return;
     
-    // Dispatch reset password action
     dispatch(resetPassword(resetEmail));
   };
 
-  // Handle resend password reset link
   const handleResendLink = () => {
     dispatch(resetPasswordReset());
   };
 
-  // Close toast notification
   const closeToast = () => {
     dispatch(hideToast());
   };
 
-  // Open reset password modal
   const openForgotModal = (e) => {
     e.preventDefault();
     dispatch(setShowForgotModal(true));
   };
 
-  // Close reset password modal
   const closeForgotModal = () => {
     dispatch(setShowForgotModal(false));
   };
 
-  // Handle email input change in modal
   const handleEmailChange = (e) => {
     dispatch(setResetEmail(e.target.value));
   };
@@ -189,7 +173,6 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Forgot Password Modal */}
       {showForgotModal && (
         <Modal title="Quên mật khẩu" onClose={closeForgotModal}>
           <div className="forgot-password-container">

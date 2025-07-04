@@ -1,8 +1,7 @@
 import React from "react";
-import "../../../assets/Modals.css"; // Import the CSS we created
+import "../../../assets/Modals.css"; 
 
 const Modal = ({ title, children, onClose }) => {
-  // Close modal when clicking outside the modal content
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) {
       onClose();

@@ -10,7 +10,6 @@ import "../../../assets/AuthPage.css";
 import * as Yup from "yup";
 import PATHS from "../../../constants/path";
 
-// Schema validation for registration form
 const registerSchema = Yup.object({
   full_name: Yup.string()
     .required("Vui lòng nhập họ và tên")
@@ -32,7 +31,6 @@ const registerSchema = Yup.object({
 });
 
 const RegisterPage = () => {
-  // Form states
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -41,7 +39,6 @@ const RegisterPage = () => {
     confirm_password: "",
   });
 
-  // Validation states
   const [errors, setErrors] = useState({
     full_name: "",
     email: "",
@@ -50,14 +47,12 @@ const RegisterPage = () => {
     confirm_password: "",
   });
 
-  // UI states
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: "", type: "" });
 
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     
@@ -66,7 +61,6 @@ const RegisterPage = () => {
       [name]: value,
     }));
     
-    // Clear error when user types
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -75,7 +69,6 @@ const RegisterPage = () => {
     }
   };
 
-  // Validate form data with Yup
   const validateForm = async () => {
     try {
       await registerSchema.validate(formData, { abortEarly: false });
@@ -90,7 +83,6 @@ const RegisterPage = () => {
     }
   };
 
-  // Handle registration form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -100,7 +92,6 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      // Chuyển đổi key đúng với backend
       const payload = {
         fullName: formData.full_name,
         email: formData.email,
@@ -130,7 +121,6 @@ const RegisterPage = () => {
     }
   };
 
-  // Close toast notification
   const closeToast = () => {
     setToast({ ...toast, visible: false });
   };

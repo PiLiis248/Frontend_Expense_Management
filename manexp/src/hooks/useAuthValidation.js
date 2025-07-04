@@ -1,4 +1,3 @@
-// hooks/useValidation.js (renamed from useAuthValidation)
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import * as Yup from "yup";
@@ -110,7 +109,6 @@ export const useValidation = () => {
   const validateSingleField = useCallback(async (schema, fieldName, value, allData = {}, formType = 'auth') => {
     try {
       if (fieldName === 'confirm_password') {
-        // Special handling for confirm_password
         if (value !== allData.new_password) {
           throw new Error("Mật khẩu xác nhận không khớp");
         }
@@ -121,7 +119,6 @@ export const useValidation = () => {
     } catch (error) {
       const errorMessage = error.message;
       
-      // Dispatch single field error based on form type
       if (formType === 'profile') {
         dispatch(setProfileErrors(prev => ({ ...prev, [fieldName]: errorMessage })));
       } else if (formType === 'password') {

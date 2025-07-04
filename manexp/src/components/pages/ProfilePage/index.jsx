@@ -1,30 +1,30 @@
 "use client"
-
 import { useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
-import { useAuth } from "../../../constants/AuthContext" 
+import { useAuth } from "../../../constants/AuthContext"
 import InputField from "../../common/InputField"
 import Button from "../../common/Button"
 import Toast from "../../common/Toast"
 import {
   fetchUserProfile,
   updateUserProfile,
+  updateNoticeSettings,
   changePassword,
   setActiveTab,
   resetProfileTab,
   resetPasswordTab,
   updateProfileData,
   updatePasswordData,
-  removeToast
+  toggleNotice,
+  removeToast,
 } from "../../../redux/profile/profileSlice"
 import { useValidation } from "../../../hooks/useAuthValidation"
 import "../../../assets/ProfilePage.css"
 
 const ProfilePage = () => {
   const dispatch = useDispatch()
-  const { updateUser } = useAuth() // Lấy updateUser method
-  
-  // Redux state
+  const { updateUser, user: authUser } = useAuth() 
+
   const {
     // eslint-disable-next-line no-unused-vars
     originalProfileData,
@@ -35,127 +35,114 @@ const ProfilePage = () => {
     isLoadingUserData,
     isProfileLoading,
     isPasswordLoading,
+    isNoticeLoading,
     toasts,
-    activeTab
-  } = useSelector(state => state.profile)
+    activeTab,
+  } = useSelector((state) => state.profile)
 
-  // Validation hook
-  const {
-    validateProfileForm,
-    validatePasswordForm,
-    validateProfileField,
-    validatePasswordField,
-    clearFieldError
-  } = useValidation()
+  const { validateProfileForm, validatePasswordForm, validateProfileField, validatePasswordField, clearFieldError } =
+    useValidation()
 
-  // Fetch user profile data when component mounts
   useEffect(() => {
     dispatch(fetchUserProfile())
   }, [dispatch])
 
-  // Handle tab changes with reset functionality
   const handleTabChange = (newTab) => {
     if (newTab !== activeTab) {
-      // Reset the tab that we're leaving
       if (activeTab === "profile") {
         dispatch(resetProfileTab())
       } else if (activeTab === "password") {
         dispatch(resetPasswordTab())
       }
-      
+
       dispatch(setActiveTab(newTab))
     }
   }
 
-  // Handle profile form input changes
   const handleProfileChange = async (e) => {
     const { name, value } = e.target
-    
+
     dispatch(updateProfileData({ name, value }))
-
-    // Clear specific field error when user starts typing
     if (profileErrors[name]) {
-      clearFieldError(name, 'profile')
+      clearFieldError(name, "profile")
     }
-
-    // Real-time validation for current field
     const newProfileData = { ...currentProfileData, [name]: value }
     await validateProfileField(name, value, newProfileData)
   }
 
-  // Handle password form input changes
   const handlePasswordChange = async (e) => {
     const { name, value } = e.target
-    
+
     dispatch(updatePasswordData({ name, value }))
-
-    // Clear specific field error when user starts typing
     if (passwordErrors[name]) {
-      clearFieldError(name, 'password')
+      clearFieldError(name, "password")
     }
-
-    // Real-time validation for current field
     const newPasswordData = { ...passwordData, [name]: value }
     const { isValid } = await validatePasswordField(name, value, newPasswordData)
-    
-    // Special handling for new_password - check confirm_password too
-    if (name === 'new_password' && passwordData.confirm_password && isValid) {
-      await validatePasswordField('confirm_password', passwordData.confirm_password, newPasswordData)
+
+    if (name === "new_password" && passwordData.confirm_password && isValid) {
+      await validatePasswordField("confirm_password", passwordData.confirm_password, newPasswordData)
     }
   }
 
-  // Handle profile form submission
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault()
-    
-    // Validate form data
-    const { isValid } = await validateProfileForm(currentProfileData)
-    
-    if (!isValid) {
+  const handleNoticeToggle = async () => {
+    if (!authUser?.id) {
+      console.error("User ID not found")
       return
     }
 
+    const newNoticeValue = !currentProfileData.notice
+
+    dispatch(toggleNotice())
+
+    dispatch(
+      updateNoticeSettings({
+        userId: authUser.id,
+        notice: newNoticeValue,
+      }),
+    )
+  }
+
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault()
+
+    const { isValid } = await validateProfileForm(currentProfileData)
+
+    if (!isValid) {
+      return
+    }
     try {
-      // Dispatch update action
       const resultAction = await dispatch(updateUserProfile(currentProfileData))
-      
-      // Nếu update thành công, cập nhật AuthContext
+
       if (updateUserProfile.fulfilled.match(resultAction)) {
         updateUser({
           fullName: currentProfileData.full_name,
           email: currentProfileData.email,
-          phoneNumber: currentProfileData.phone_number
+          phoneNumber: currentProfileData.phone_number,
         })
       }
     } catch (error) {
-      console.error('Profile update error:', error)
+      console.error("Profile update error:", error)
     }
   }
 
-  // Handle password form submission
   const handlePasswordSubmit = async (e) => {
     e.preventDefault()
-    
-    // Validate form data
+
     const { isValid } = await validatePasswordForm(passwordData)
-    
+
     if (!isValid) {
       return
     }
-
     dispatch(changePassword(passwordData))
   }
 
-  // Check if profile form has errors
-  const hasProfileErrors = Object.keys(profileErrors).some(key => profileErrors[key])
-  
-  // Check if password form has errors
-  const hasPasswordErrors = Object.keys(passwordErrors).some(key => passwordErrors[key])
+  const hasProfileErrors = Object.keys(profileErrors).some((key) => profileErrors[key])
+
+  const hasPasswordErrors = Object.keys(passwordErrors).some((key) => passwordErrors[key])
 
   return (
     <div className="profile-page">
-      <h1 className="page-title">Thông tin tài khoản</h1>
-
       <div className="profile-container">
         <div className="profile-tabs">
           <button
@@ -173,7 +160,6 @@ const ProfilePage = () => {
             Thay đổi mật khẩu
           </button>
         </div>
-
         <div className="profile-content">
           {activeTab === "profile" && (
             <div className="profile-form-container">
@@ -195,7 +181,6 @@ const ProfilePage = () => {
                     error={profileErrors.full_name}
                     required
                   />
-
                   <InputField
                     label="Email"
                     type="email"
@@ -207,27 +192,48 @@ const ProfilePage = () => {
                     error={profileErrors.email}
                     required
                   />
-
-                  {/* Phone number as display field */}
                   <div className="form-group">
                     <label htmlFor="phone_display" className="form-label">
                       Số điện thoại
                     </label>
                     <div className="phone-display">
-                      <span className="phone-value">
-                        {currentProfileData.phone_number || "Chưa cập nhật"}
-                      </span>
-                      <span className="phone-note">
-                        (Không thể thay đổi)
-                      </span>
+                      <span className="phone-value">{currentProfileData.phone_number || "Chưa cập nhật"}</span>
+                      <span className="phone-note">(Không thể thay đổi)</span>
                     </div>
                   </div>
 
-                  <Button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={isProfileLoading || hasProfileErrors}
-                  >
+                  <div className="form-group">
+                    <label className="form-label">Thông báo email</label>
+                    <div className="notice-toggle-container">
+                      <div className="notice-toggle-wrapper">
+                        <button
+                          type="button"
+                          className={`notice-toggle ${currentProfileData.notice ? "active" : ""}`}
+                          onClick={handleNoticeToggle}
+                          disabled={isNoticeLoading}
+                        >
+                          <div className="toggle-slider">
+                            <div className="toggle-knob"></div>
+                          </div>
+                          {isNoticeLoading && (
+                            <div className="toggle-loading">
+                              <i className="fas fa-spinner fa-spin"></i>
+                            </div>
+                          )}
+                        </button>
+                        <span className="notice-label">
+                          {currentProfileData.notice
+                            ? "Nhận báo cáo thu chi hằng ngày qua email"
+                            : "Không nhận báo cáo thu chi qua email"}
+                        </span>
+                      </div>
+                      <p className="notice-description">
+                        Khi bật, bạn sẽ nhận được báo cáo tổng hợp thu chi hằng ngày qua email.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button type="submit" className="btn btn-primary" disabled={isProfileLoading || hasProfileErrors}>
                     {isProfileLoading ? (
                       <>
                         <i className="fas fa-spinner fa-spin"></i>
@@ -241,7 +247,6 @@ const ProfilePage = () => {
               )}
             </div>
           )}
-
           {activeTab === "password" && (
             <div className="password-form-container">
               <form className="password-form" onSubmit={handlePasswordSubmit}>
@@ -256,7 +261,6 @@ const ProfilePage = () => {
                   error={passwordErrors.old_password}
                   required
                 />
-
                 <InputField
                   label="Mật khẩu mới"
                   type="password"
@@ -268,7 +272,6 @@ const ProfilePage = () => {
                   error={passwordErrors.new_password}
                   required
                 />
-
                 <InputField
                   label="Xác nhận mật khẩu mới"
                   type="password"
@@ -280,12 +283,7 @@ const ProfilePage = () => {
                   error={passwordErrors.confirm_password}
                   required
                 />
-
-                <Button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={isPasswordLoading || hasPasswordErrors}
-                >
+                <Button type="submit" className="btn btn-primary" disabled={isPasswordLoading || hasPasswordErrors}>
                   {isPasswordLoading ? (
                     <>
                       <i className="fas fa-spinner fa-spin"></i>
@@ -300,10 +298,8 @@ const ProfilePage = () => {
           )}
         </div>
       </div>
-
-      {/* Toast notifications */}
       <div className="toast-container">
-        {toasts.map(toast => (
+        {toasts.map((toast) => (
           <Toast
             key={toast.id}
             message={toast.message}

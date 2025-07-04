@@ -1,8 +1,6 @@
-// src/store/slices/authSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import authService from "../../services/authService";
 
-// Async thunks
 export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async ({ phone, password, rememberMe, silent = false }, { rejectWithValue }) => {
@@ -13,7 +11,6 @@ export const loginUser = createAsyncThunk(
         throw new Error("Invalid response from server!");
       }
       
-      // Save credentials if remember me is checked
       if (rememberMe) {
         localStorage.setItem("rememberedLogin", JSON.stringify({
           phone,
@@ -25,7 +22,6 @@ export const loginUser = createAsyncThunk(
       
       return { ...response, silent };
     } catch (error) {
-      // If auto login fails, remove remembered credentials
       if (silent) {
         localStorage.removeItem("rememberedLogin");
       }
@@ -83,40 +79,31 @@ export const loadRememberedCredentials = createAsyncThunk(
 const authSlice = createSlice({
   name: "auth",
   initialState: {
-    // User data
     user: null,
     isAuthenticated: false,
-    isLoading: true, // Add isLoading to initial state
     
-    // Login form data
     formData: {
       phone: "",
       password: "",
       rememberMe: false,
     },
     
-    // Login state
     loginLoading: false,
     loginError: null,
     
-    // Reset password state
     resetEmail: "",
     resetLoading: false,
     resetError: null,
-    resetStatus: "", // "", "success", "error"
     resetCountdown: 0,
     
-    // Modal state
     showForgotModal: false,
     
-    // Toast state
     toast: {
       visible: false,
       message: "",
       type: "",
     },
     
-    // Form validation errors
     formErrors: {
       phone: "",
       password: "",
@@ -124,12 +111,10 @@ const authSlice = createSlice({
     },
   },
   reducers: {
-    // Form actions
     updateFormData: (state, action) => {
       const { name, value } = action.payload;
       state.formData[name] = value;
       
-      // Clear error when user types
       if (state.formErrors[name]) {
         state.formErrors[name] = "";
       }
@@ -147,11 +132,9 @@ const authSlice = createSlice({
       };
     },
     
-    // Reset password modal actions
     setShowForgotModal: (state, action) => {
       state.showForgotModal = action.payload;
       if (!action.payload) {
-        // Reset modal state when closing
         state.resetEmail = "";
         state.resetError = null;
         state.resetStatus = "";
@@ -185,7 +168,6 @@ const authSlice = createSlice({
       state.resetError = null;
     },
     
-    // Toast actions
     showToast: (state, action) => {
       state.toast = {
         visible: true,
@@ -198,7 +180,6 @@ const authSlice = createSlice({
       state.toast.visible = false;
     },
     
-    // Auth actions
     setUser: (state, action) => {
       state.user = action.payload.user;
       state.isAuthenticated = action.payload.isAuthenticated;
@@ -213,21 +194,18 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.isLoading = false;
       
-      // Reset form data when logout
       state.formData = {
         phone: "",
         password: "",
         rememberMe: false,
       };
       
-      // Clear all errors
       state.formErrors = {
         phone: "",
         password: "",
         email: "",
       };
       
-      // Reset all other states
       state.loginLoading = false;
       state.loginError = null;
       state.resetEmail = "";
@@ -245,40 +223,34 @@ const authSlice = createSlice({
       localStorage.removeItem("rememberedLogin");
     },
     resetFormData: (state) => {
-      // Reset form data về trạng thái ban đầu
       state.formData = {
         phone: "",
         password: "",
         rememberMe: false,
       };
       
-      // Clear tất cả form errors
       state.formErrors = {
         phone: "",
         password: "",
         email: "",
       };
       
-      // Reset các state liên quan đến reset password
       state.resetEmail = "";
       state.resetError = null;
       state.resetStatus = "";
       state.resetCountdown = 0;
       
-      // Ẩn toast nếu đang hiển thị
       state.toast = {
         visible: false,
         message: "",
         type: "",
       };
       
-      // Đảm bảo modal forgot password bị đóng
       state.showForgotModal = false;
     },
   },
   extraReducers: (builder) => {
     builder
-      // Login cases
       .addCase(loginUser.pending, (state) => {
         state.loginLoading = true;
         state.loginError = null;
@@ -289,7 +261,6 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.isLoading = false;
         
-        // Only show toast for non-silent logins
         if (!action.payload.silent) {
           state.toast = {
             visible: true,
@@ -308,7 +279,6 @@ const authSlice = createSlice({
         };
       })
       
-      // Reset password cases
       .addCase(resetPassword.pending, (state) => {
         state.resetLoading = true;
         state.resetError = null;
@@ -324,7 +294,6 @@ const authSlice = createSlice({
         state.resetStatus = "error";
       })
       
-      // Register user cases
       .addCase(registerUser.pending, (state) => {
         state.loginLoading = true;
         state.loginError = null;
@@ -347,7 +316,6 @@ const authSlice = createSlice({
         };
       })
       
-      // Load remembered credentials cases
       .addCase(loadRememberedCredentials.fulfilled, (state, action) => {
         if (action.payload) {
           state.formData = {

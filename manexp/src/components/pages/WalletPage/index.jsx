@@ -31,23 +31,19 @@ const WalletPage = () => {
   })
   const [editingId, setEditingId] = useState(null)
 
-  // Thêm state cho modal xác nhận xóa:
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletingSource, setDeletingSource] = useState(null)
 
-  // Ref để scroll lên đầu trang
   const pageTopRef = useRef(null)
 
   useEffect(() => {
     dispatch(fetchMoneySources())
   }, [dispatch])
 
-  // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
   }
 
-  // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData((prev) => ({
@@ -56,11 +52,9 @@ const WalletPage = () => {
     }))
   }
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // Validation
     if (!formData.name.trim()) {
       dispatch(setToast({ message: "Vui lòng nhập tên nguồn tiền", type: "error" }))
       return
@@ -92,25 +86,19 @@ const WalletPage = () => {
 
     try {
       if (editingId) {
-        // Update existing money source
         await dispatch(updateMoneySource({ id: editingId, payload })).unwrap()
       } else {
-        // Create new money source
         await dispatch(createMoneySource(payload)).unwrap()
       }
 
-      // Fetch lại danh sách sau khi thành công
       dispatch(fetchMoneySources())
 
-      // Reset form on success
       resetForm()
     } catch (error) {
-      // Error is already handled in the slice
       console.error("Error saving money source:", error)
     }
   }
 
-  // Handle edit money source
   const handleEdit = (source) => {
     setFormData({
       name: source.name,
@@ -123,7 +111,6 @@ const WalletPage = () => {
     setEditingId(source.id)
     setShowForm(true)
 
-    // Scroll lên đầu trang với animation mượt
     setTimeout(() => {
       pageTopRef.current?.scrollIntoView({
         behavior: "smooth",
@@ -132,9 +119,7 @@ const WalletPage = () => {
     }, 0)
   }
 
-  // Handle delete money source
   const handleDelete = (source) => {
-    // Check if money source has transactions (if this info is available)
     const transactionCount = source.transactions?.length || 0;
     if (source && transactionCount > 0) {
       dispatch(
@@ -155,10 +140,8 @@ const WalletPage = () => {
 
     try {
       await dispatch(deleteMoneySource(deletingSource.id)).unwrap()
-      // Fetch lại danh sách sau khi xóa thành công
       dispatch(fetchMoneySources())
     } catch (error) {
-      // Error is already handled in the slice
       console.error("Error deleting money source:", error)
     } finally {
       setShowDeleteModal(false)
@@ -171,7 +154,6 @@ const WalletPage = () => {
     setDeletingSource(null)
   }
 
-  // Handle toggle active status
   const handleToggleActive = async (id) => {
     const source = moneySources.find((s) => s.id === id)
     if (!source) return
@@ -184,15 +166,12 @@ const WalletPage = () => {
 
     try {
       await dispatch(toggleMoneySourceStatus(id)).unwrap()
-      // Fetch lại danh sách sau khi toggle thành công
       dispatch(fetchMoneySources())
     } catch (error) {
-      // Error is already handled in the slice
       console.error("Error toggling money source status:", error)
     }
   }
 
-  // Reset form
   const resetForm = () => {
     setFormData({
       name: "",
@@ -206,7 +185,6 @@ const WalletPage = () => {
     setEditingId(null)
   }
 
-  // Get display name for money source type
   const getTypeDisplayName = (type) => {
     switch (type) {
       case "CASH":
@@ -222,7 +200,6 @@ const WalletPage = () => {
     }
   }
 
-  // Get icon for money source type
   const getTypeIcon = (type) => {
     switch (type) {
       case "CASH":
@@ -244,7 +221,6 @@ const WalletPage = () => {
 
   return (
     <div className="money-sources-page" ref={pageTopRef}>
-      {/* Toast notification */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => dispatch(clearToast())} />}
 
       <div className="page-header">
@@ -438,7 +414,6 @@ const WalletPage = () => {
           </div>
         )}
       </div>
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="modal-overlay">
           <div className="modal-content">

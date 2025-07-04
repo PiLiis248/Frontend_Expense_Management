@@ -27,7 +27,7 @@ axiosInstance.interceptors.response.use(
       console.error("Unauthorized error in Axios: ", error);  
       tokenMethod.remove();
     }
-    return Promise.reject(error); // Truyền lỗi đi tiếp
+    return Promise.reject(error); 
   }
 );
 

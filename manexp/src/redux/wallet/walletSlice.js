@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 import walletService from "../../services/walletService"
 
-// Async thunks
 export const fetchMoneySources = createAsyncThunk("wallet/fetchMoneySources", async (_, { rejectWithValue }) => {
   try {
     const response = await walletService.getAllMoneySources()
@@ -64,7 +63,6 @@ export const toggleMoneySourceStatus = createAsyncThunk(
   },
 )
 
-// Initial state
 const initialState = {
   moneySources: [],
   loading: false,
@@ -73,7 +71,6 @@ const initialState = {
   toast: null,
 }
 
-// Slice
 const walletSlice = createSlice({
   name: "wallet",
   initialState,
@@ -93,7 +90,6 @@ const walletSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch money sources
       .addCase(fetchMoneySources.pending, (state) => {
         state.loading = true
         state.error = null
@@ -109,7 +105,6 @@ const walletSlice = createSlice({
         state.toast = { message: action.payload, type: "error" }
       })
 
-      // Create money source
       .addCase(createMoneySource.pending, (state) => {
         state.submitting = true
         state.error = null
@@ -119,7 +114,6 @@ const walletSlice = createSlice({
         state.submitting = false
         state.toast = { message: "Thêm nguồn tiền thành công!", type: "success" }
         state.error = null
-        // Không cập nhật state ở đây, sẽ fetch lại trong component
       })
       .addCase(createMoneySource.rejected, (state, action) => {
         state.submitting = false
@@ -127,7 +121,6 @@ const walletSlice = createSlice({
         state.toast = { message: action.payload, type: "error" }
       })
 
-      // Update money source
       .addCase(updateMoneySource.pending, (state) => {
         state.submitting = true
         state.error = null
@@ -137,7 +130,6 @@ const walletSlice = createSlice({
         state.submitting = false
         state.toast = { message: "Cập nhật nguồn tiền thành công!", type: "success" }
         state.error = null
-        // Không cập nhật state ở đây, sẽ fetch lại trong component
       })
       .addCase(updateMoneySource.rejected, (state, action) => {
         state.submitting = false
@@ -145,7 +137,6 @@ const walletSlice = createSlice({
         state.toast = { message: action.payload, type: "error" }
       })
 
-      // Delete money source
       .addCase(deleteMoneySource.pending, (state) => {
         state.submitting = true
         state.error = null
@@ -155,7 +146,6 @@ const walletSlice = createSlice({
         state.submitting = false
         state.toast = { message: "Xóa nguồn tiền thành công!", type: "success" }
         state.error = null
-        // Không cập nhật state ở đây, sẽ fetch lại trong component
       })
       .addCase(deleteMoneySource.rejected, (state, action) => {
         state.submitting = false
@@ -163,7 +153,6 @@ const walletSlice = createSlice({
         state.toast = { message: action.payload, type: "error" }
       })
 
-      // Toggle money source status
       .addCase(toggleMoneySourceStatus.pending, (state) => {
         state.submitting = true
         state.error = null
@@ -174,7 +163,6 @@ const walletSlice = createSlice({
         const statusText = source && !source.isActive ? "Kích hoạt" : "Vô hiệu hóa"
         state.toast = { message: `${statusText} nguồn tiền thành công!`, type: "success" }
         state.error = null
-        // Không cập nhật state ở đây, sẽ fetch lại trong component
       })
       .addCase(toggleMoneySourceStatus.rejected, (state, action) => {
         state.submitting = false

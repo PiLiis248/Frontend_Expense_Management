@@ -362,13 +362,11 @@ const IconPicker = ({ selectedIcon, onIconSelect, onClose }) => {
     let iconsToShow = []
 
     if (selectedCategory === "all") {
-      // Show all icons from all categories
       iconsToShow = Object.values(iconCategories).flatMap((category) => category.icons)
     } else {
-      // Show only icons from selected category
       const categoryData = iconCategories[selectedCategory]
       if (categoryData) {
-        iconsToShow = [...categoryData.icons] // Create a copy to avoid mutation
+        iconsToShow = [...categoryData.icons] 
       } else {
         iconsToShow = []
       }
@@ -387,7 +385,6 @@ const IconPicker = ({ selectedIcon, onIconSelect, onClose }) => {
   const handleCategoryChange = (e) => {
     const newCategory = e.target.value
     setSelectedCategory(newCategory)
-    // Clear search when changing category for better UX
     setSearchTerm("")
   }
 

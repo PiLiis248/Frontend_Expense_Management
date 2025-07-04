@@ -24,18 +24,15 @@ const CategoryPage = () => {
   const [toast, setToast] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [showIconPicker, setShowIconPicker] = useState(false)
-  const [expandedCategories, setExpandedCategories] = useState(new Set()) // Thêm state để quản lý dropdown
+  const [expandedCategories, setExpandedCategories] = useState(new Set()) 
 
-  // Thêm state để quản lý lỗi validation
   const [formErrors, setFormErrors] = useState({
     name: "",
     icon: "",
   })
 
-  // Ref để scroll lên đầu trang
   const pageTopRef = useRef(null)
 
-  // Icon mapping để hiển thị icon mặc định cho các danh mục
   const iconMapping = {
     // Categories
     dining: "utensils",
@@ -169,27 +166,22 @@ const CategoryPage = () => {
     report: "chart-bar"
   };
 
-  // Function để lấy icon class
   const getIconClass = (iconName) => {
     if (!iconName) return "tag"
     return iconMapping[iconName] || iconName || "tag"
   }
 
-  // Function để kiểm tra xem category có phải là default không (userId = null)
   const isDefaultCategory = (category) => {
     return category.user === null || category.user === undefined
   }
 
-  // Function để kiểm tra xem category có thể xóa được không
   const canDeleteCategory = (category) => {
-    // Không thể xóa default categories (userId = null)
     if (isDefaultCategory(category)) {
       return false
     }
     return true
   }
 
-  // Function để toggle dropdown
   const toggleCategoryExpansion = (categoryId) => {
     setExpandedCategories((prev) => {
       const newSet = new Set(prev)
@@ -202,18 +194,15 @@ const CategoryPage = () => {
     })
   }
 
-  // Function để mở rộng tất cả
   const expandAll = () => {
     const allParentIds = parentCategories.map((cat) => cat.id)
     setExpandedCategories(new Set(allParentIds))
   }
 
-  // Function để thu gọn tất cả
   const collapseAll = () => {
     setExpandedCategories(new Set())
   }
 
-  // Fetch categories from API
   const fetchCategories = async () => {
     try {
       setLoading(true)
@@ -231,18 +220,13 @@ const CategoryPage = () => {
     fetchCategories()
   }, [])
 
-  // Tính tổng giao dịch của danh mục cha (bao gồm cả giao dịch của danh mục con)
   const getTotalTransactions = (parentId) => {
-    // Tìm danh mục cha
     const parentCategory = categories.find(cat => cat.id === parentId)
     
-    // Tính số giao dịch của danh mục cha
     let totalTransactions = parentCategory?.transactions ? parentCategory.transactions.length : 0
     
-    // Tìm tất cả danh mục con của danh mục cha này
     const childCategories = categories.filter((cat) => cat.parentId === parentId)
 
-    // Cộng thêm số giao dịch của từng danh mục con
     childCategories.forEach((child) => {
       totalTransactions += child.transactions ? child.transactions.length : 0
     })
@@ -250,19 +234,16 @@ const CategoryPage = () => {
     return totalTransactions
   }
 
-  // Show toast notification
   const showToast = (message, type) => {
     setToast({ message, type })
   }
 
-  // Function để validate form
   const validateForm = () => {
     const errors = {
       name: "",
       icon: "",
     }
 
-    // Validate tên danh mục
     if (!formData.name || formData.name.trim() === "") {
       errors.name = "Vui lòng nhập tên danh mục"
     } else if (formData.name.trim().length < 2) {
@@ -271,12 +252,10 @@ const CategoryPage = () => {
       errors.name = "Tên danh mục không được vượt quá 50 ký tự"
     }
 
-    // Validate icon
     if (!formData.icon || formData.icon.trim() === "") {
       errors.icon = "Vui lòng chọn hoặc nhập icon cho danh mục"
     }
 
-    // Kiểm tra trùng tên danh mục (ngoại trừ khi đang edit)
     const isDuplicateName = categories.some(
       (cat) => cat.name.toLowerCase().trim() === formData.name.toLowerCase().trim() && cat.id !== editingId,
     )
@@ -287,11 +266,9 @@ const CategoryPage = () => {
 
     setFormErrors(errors)
 
-    // Return true nếu không có lỗi
     return !errors.name && !errors.icon
   }
 
-  // Handle form input changes với validation real-time
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({
@@ -299,7 +276,6 @@ const CategoryPage = () => {
       [name]: name === "parentId" ? (value ? Number.parseInt(value) : null) : value,
     }))
 
-    // Clear error khi user bắt đầu nhập
     if (formErrors[name]) {
       setFormErrors((prev) => ({
         ...prev,
@@ -308,7 +284,6 @@ const CategoryPage = () => {
     }
   }
 
-  // Handle icon selection với validation
   const handleIconSelect = (iconName) => {
     setFormData((prev) => ({
       ...prev,
@@ -316,7 +291,6 @@ const CategoryPage = () => {
     }))
     setShowIconPicker(false)
 
-    // Clear error khi user chọn icon
     if (formErrors.icon) {
       setFormErrors((prev) => ({
         ...prev,
@@ -325,7 +299,6 @@ const CategoryPage = () => {
     }
   }
 
-  // Handle manual icon input change
   const handleIconInputChange = (e) => {
     const { value } = e.target
     setFormData((prev) => ({
@@ -333,7 +306,6 @@ const CategoryPage = () => {
       icon: value,
     }))
 
-    // Clear error khi user nhập icon
     if (formErrors.icon) {
       setFormErrors((prev) => ({
         ...prev,
@@ -342,11 +314,9 @@ const CategoryPage = () => {
     }
   }
 
-  // Handle form submission với validation
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // Validate form trước khi submit
     if (!validateForm()) {
       showToast("Vui lòng kiểm tra lại thông tin đã nhập!", "error")
       return
@@ -354,19 +324,15 @@ const CategoryPage = () => {
 
     try {
       if (editingId) {
-        // Update existing category
         await categoryService.updateCategory(editingId, formData)
         showToast("Cập nhật danh mục thành công!", "success")
       } else {
-        // Create new category
         await categoryService.createCategory(formData)
         showToast("Thêm danh mục thành công!", "success")
       }
 
-      // Refresh categories list
       await fetchCategories()
 
-      // Reset form
       setFormData({
         name: "",
         parentId: null,
@@ -374,13 +340,11 @@ const CategoryPage = () => {
         transactionTypesId: 1,
       })
 
-      // Reset errors
       setFormErrors({
         name: "",
         icon: "",
       })
 
-      // Hide form
       setShowForm(false)
       setEditingId(null)
     } catch (error) {
@@ -389,7 +353,6 @@ const CategoryPage = () => {
     }
   }
 
-  // Handle edit category với auto scroll
   const handleEdit = (category) => {
     setFormData({
       name: category.name,
@@ -400,13 +363,11 @@ const CategoryPage = () => {
     setEditingId(category.id)
     setShowForm(true)
 
-    // Reset errors khi edit
     setFormErrors({
       name: "",
       icon: "",
     })
 
-    // Scroll lên đầu trang với animation mượt
     setTimeout(() => {
       pageTopRef.current?.scrollIntoView({
         behavior: "smooth",
@@ -415,22 +376,18 @@ const CategoryPage = () => {
     }, 0)
   }
 
-  // Handle delete category với dialog xác nhận
   const handleDelete = (id) => {
     const category = categories.find((cat) => cat.id === id)
     if (!category) return
 
-    // Kiểm tra xem có thể xóa category này không
     if (!canDeleteCategory(category)) {
       showToast("Không thể xóa danh mục mặc định của hệ thống!", "error")
       return
     }
 
-    // Check if category has children
     const childCategories = categories.filter((cat) => cat.parentId === id)
     const hasChildren = childCategories.length > 0
 
-    // Tạo thông báo xác nhận
     let confirmMessage = `Hiện tại danh mục "${category.name}" đang có`
     const warnings = []
 
@@ -452,7 +409,6 @@ const CategoryPage = () => {
       confirmMessage = `Bạn có chắc muốn xóa danh mục "${category.name}"?`
     }
 
-    // Hiển thị dialog xác nhận
     setDeleteConfirm({
       categoryId: id,
       categoryName: category.name,
@@ -463,7 +419,6 @@ const CategoryPage = () => {
     })
   }
 
-  // Xử lý xác nhận xóa
   const confirmDelete = async () => {
     const { categoryId } = deleteConfirm
 
@@ -471,7 +426,6 @@ const CategoryPage = () => {
       await categoryService.deleteCategory(categoryId)
       showToast("Xóa danh mục thành công!", "success")
 
-      // Refresh categories list
       await fetchCategories()
     } catch (error) {
       console.error("Error deleting category:", error)
@@ -481,12 +435,10 @@ const CategoryPage = () => {
     setDeleteConfirm(null)
   }
 
-  // Hủy xóa
   const cancelDelete = () => {
     setDeleteConfirm(null)
   }
 
-  // Reset form function
   const resetForm = () => {
     setFormData({
       name: "",
@@ -502,15 +454,12 @@ const CategoryPage = () => {
     setEditingId(null)
   }
 
-  // Get parent categories (categories with no parent)
   const parentCategories = categories.filter((category) => !category.parentId)
 
-  // Get child categories for a parent
   const getChildCategories = (parentId) => {
     return categories.filter((category) => category.parentId === parentId)
   }
 
-  // Filter categories by search term
   const filteredCategories = searchTerm
     ? categories.filter((category) => category.name.toLowerCase().includes(searchTerm.toLowerCase()))
     : []
@@ -521,10 +470,8 @@ const CategoryPage = () => {
 
   return (
     <div className="categories-page" ref={pageTopRef}>
-      {/* Toast notification */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Delete confirmation modal */}
       <ConfirmModal
         isOpen={!!deleteConfirm}
         onClose={cancelDelete}
@@ -537,7 +484,6 @@ const CategoryPage = () => {
         warnings={deleteConfirm?.warnings || []}
       />
 
-      {/* Icon Picker Modal */}
       {showIconPicker && (
         <IconPicker
           selectedIcon={formData.icon}
@@ -568,7 +514,6 @@ const CategoryPage = () => {
         </Button>
       </div>
 
-      {/* Form để thêm/sửa danh mục */}
       {showForm && (
         <div className="category-form-container">
           <form className="category-form" onSubmit={handleSubmit}>
@@ -663,7 +608,6 @@ const CategoryPage = () => {
         </div>
       )}
 
-      {/* Search bar */}
       <div className="search-section">
         <div className="search-container">
           <i className="fas fa-search search-icon"></i>
@@ -682,10 +626,8 @@ const CategoryPage = () => {
         </div>
       </div>
 
-      {/* Categories grid */}
       <div className="categories-container">
         {searchTerm ? (
-          // Hiển thị kết quả tìm kiếm
           <div className="search-results">
             <h3>Kết quả tìm kiếm cho "{searchTerm}"</h3>
             {filteredCategories.length > 0 ? (
@@ -754,11 +696,9 @@ const CategoryPage = () => {
             )}
           </div>
         ) : (
-          // Hiển thị danh sách danh mục theo dạng card grid với dropdown
           <div className="categories-grid-container">
             {parentCategories.length > 0 ? (
               <>
-                {/* Controls để mở rộng/thu gọn tất cả */}
                 <div className="category-controls">
                   <div className="expand-collapse-controls">
                     <Button className="btn btn-sm btn-outline-secondary" onClick={expandAll}>
@@ -780,7 +720,6 @@ const CategoryPage = () => {
 
                     return (
                       <div key={parentCategory.id} className="category-card parent-card">
-                        {/* Parent Category Header */}
                         <div className="category-card-header">
                           <div className="category-icon large">
                             <i className={`fas fa-${getIconClass(parentCategory.icon)}`}></i>
@@ -806,7 +745,6 @@ const CategoryPage = () => {
                             </div>
                           </div>
                           <div className="category-actions">
-                            {/* Dropdown toggle button */}
                             {childCategories.length > 0 && (
                               <Button
                                 className="btn btn-sm btn-outline-info dropdown-toggle"
@@ -841,7 +779,6 @@ const CategoryPage = () => {
                           </div>
                         </div>
 
-                        {/* Parent Category Stats */}
                         <div className="category-stats">
                           <div className="transaction-count">
                             <i className="fas fa-receipt"></i>
@@ -849,7 +786,6 @@ const CategoryPage = () => {
                           </div>
                         </div>
 
-                        {/* Child Categories - Dropdown Content */}
                         {childCategories.length > 0 && (
                           <div className={`child-categories ${isExpanded ? "expanded" : "collapsed"}`}>
                             <div className="child-categories-header">

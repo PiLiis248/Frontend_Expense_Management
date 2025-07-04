@@ -160,9 +160,7 @@ const transactionService = {
   getRecentTransactions: async (userId = null, limit = 10) => {
     try {
       const targetUserId = userId || getCurrentUserId()
-      const response = await axiosInstance.get(`/transactions/recent-transactions/user/${targetUserId}/limit/${limit}`)
-      console.log(response.data);
-      
+      const response = await axiosInstance.get(`/transactions/recent-transactions/user/${targetUserId}/limit/${limit}`) 
       return response.data
     } catch (error) {
       console.error("Error getting recent transactions:", error)

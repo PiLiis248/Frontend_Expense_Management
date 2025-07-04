@@ -8,6 +8,7 @@ import transactionService from "../../../services/transactionService"
 import spendingLimitService from "../../../services/spendingLimitService"
 import categoryService from "../../../services/categoryService"
 import walletService from "../../../services/walletService"
+import UserAPI from "../../../services/userService"
 
 const HomePage = () => {
   const [summary, setSummary] = useState({
@@ -18,9 +19,40 @@ const HomePage = () => {
     spendingLimits: [],
     categories: [],
   })
-  // const [someState, setSomeState] = useState(initialValue);
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null);
+
+  const fetchUser = async () => {
+    try {
+      const response = await UserAPI.getUserById();
+      if (response.status === 200) {
+        setUser(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const confirmKey = `hasConfirmedNotice-${user.id}`;
+    const hasConfirmed = sessionStorage.getItem(confirmKey);
+
+    if (user.notice === false && hasConfirmed !== "true") {
+      const result = confirm("Bạn có muốn nhận báo cáo thu chi hằng ngày về mail không?");
+      if (result) {
+        UserAPI.updateNotice(user.id, true);
+      }
+      sessionStorage.setItem(confirmKey, "true");
+    }
+  }, [user]);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,7 +81,7 @@ const HomePage = () => {
         const balance = currentBalanceResponse || 0
 
         // Process recent transactions
-       
+
         const recentTransactions = recentTransactionsResponse?.map(transaction => ({
           id: transaction.id,
           amount: transaction.amount,
@@ -59,9 +91,6 @@ const HomePage = () => {
           category: transaction.categoriesName,
         })) || []
 
-        // Process spending limits
-        console.log(spendingLimitsResponse);
-        
         const spendingLimits = spendingLimitsResponse?.map(limit => {
           // Calculate actual spent amount for this category
           // This would need to be calculated based on transactions in the current period

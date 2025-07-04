@@ -94,6 +94,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     tokenMethod.remove();
     localStorage.removeItem("rememberedLogin");
+    sessionStorage.removeItem(`hasConfirmedNotice-${user.id}`);
     dispatch(logoutAction());
     navigate(PATHS.login);
   };
